@@ -30,6 +30,9 @@ import ui.utils.cause
 import utils.Logger
 import kotlin.reflect.KClass
 
+/**
+ * 持久化 服务
+ */
 object PersistenceService {
 
     private val log = Logger("Persistence")
@@ -41,6 +44,7 @@ object PersistenceService {
     private val file = FileStorageService
 
     fun save(obj: Any) {
+        log.v("save: obj = $obj ")
         try {
             when (obj) {
                 is Denied -> file.save(
@@ -58,11 +62,13 @@ object PersistenceService {
         }
     }
 
-    fun <T: Any> load(type: KClass<T>): T {
+    fun <T : Any> load(type: KClass<T>): T {
+        log.v("load: type = $type")
         try {
             val (string, deserializer) = when (type) {
                 Denied::class -> file.load(key = BlocklistService.USER_DENIED) to newline
                 Allowed::class -> file.load(key = BlocklistService.USER_ALLOWED) to newline
+
                 Account::class -> {
                     val legacy = LegacyAccountImport.importLegacyAccount()
                     if (legacy != null) {
@@ -70,18 +76,24 @@ object PersistenceService {
                         legacy to PassthroughSerializationService
                     } else prefs.load(getPrefsKey(type)) to json
                 }
+
                 AdsCounter::class -> {
                     val legacy = LegacyAdsCounterImport.importLegacyCounter()
                     if (legacy != null) {
                         save(legacy) // To save in the current format
                         legacy to PassthroughSerializationService
-                    }
-                    else prefs.load(getPrefsKey(type)) to json
+                    } else prefs.load(getPrefsKey(type)) to json
                 }
+
                 else -> prefs.load(getPrefsKey(type)) to json
             }
+
+            log.v("load: string = $string  deserializer = $deserializer")
+
             if (string != null) {
                 val deserialized = deserializer.deserialize(string, type)
+                log.v("load : deserialized = $deserialized")
+
                 return when (type) {
                     Packs::class -> {
                         val (packs, migrated) = PackMigration.migrate(deserialized as Packs)
@@ -117,7 +129,7 @@ object PersistenceService {
         else -> throw BlokadaException("Unsupported type for persistence: $type")
     }
 
-    private fun <T: Any> getDefault(type: KClass<T>) = when (type) {
+    private fun <T : Any> getDefault(type: KClass<T>) = when (type) {
         Stats::class -> Defaults.stats() as T
         Allowed::class -> Defaults.allowed() as T
         Denied::class -> Defaults.denied() as T

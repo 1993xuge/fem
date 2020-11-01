@@ -40,9 +40,12 @@ import ui.app
 import ui.settings.SettingsFragmentDirections
 import ui.utils.getColorFromAttr
 import utils.Links
+import utils.Logger
 import utils.withBoldSections
 
 class HomeFragment : Fragment() {
+
+    private val log = Logger("HomeFragment")
 
     private val alert = AlertDialogService
     private lateinit var vm: TunnelViewModel
@@ -52,9 +55,9 @@ class HomeFragment : Fragment() {
     private lateinit var powerButton: PowerView
 
     override fun onCreateView(
-            inflater: LayoutInflater,
-            container: ViewGroup?,
-            savedInstanceState: Bundle?
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
     ): View? {
         activity?.let {
             vm = ViewModelProvider(it.app()).get(TunnelViewModel::class.java)
@@ -75,9 +78,9 @@ class HomeFragment : Fragment() {
                 s.inProgress -> getString(R.string.home_status_detail_progress)
                 s.active && s.gatewayId != null && counter == null -> {
                     (
-                        getString(R.string.home_status_detail_active) + "\n" +
-                        getString(R.string.home_status_detail_plus)
-                    ).withBoldSections(requireContext().getColorFromAttr(R.attr.colorRingPlus1))
+                            getString(R.string.home_status_detail_active) + "\n" +
+                                    getString(R.string.home_status_detail_plus)
+                            ).withBoldSections(requireContext().getColorFromAttr(R.attr.colorRingPlus1))
                 }
                 s.active && EnvironmentService.isSlim() -> {
                     getString(R.string.home_status_detail_active_slim)
@@ -89,9 +92,12 @@ class HomeFragment : Fragment() {
                 }
                 s.active && s.gatewayId != null -> {
                     (
-                        getString(R.string.home_status_detail_active_with_counter, counter.toString()) + "\n" +
-                        getString(R.string.home_status_detail_plus)
-                    ).withBoldSections(requireContext().getColorFromAttr(R.attr.colorRingPlus1))
+                            getString(
+                                R.string.home_status_detail_active_with_counter,
+                                counter.toString()
+                            ) + "\n" +
+                                    getString(R.string.home_status_detail_plus)
+                            ).withBoldSections(requireContext().getColorFromAttr(R.attr.colorRingPlus1))
                 }
                 s.active -> {
                     getString(R.string.home_status_detail_active_with_counter, counter.toString())
@@ -102,6 +108,7 @@ class HomeFragment : Fragment() {
         }
 
         vm.tunnelStatus.observe(viewLifecycleOwner, Observer { s ->
+            log.v("observe : tunnelStatus = $s")
             powerButton.cover = !s.inProgress && !s.active
             powerButton.loading = s.inProgress
             powerButton.blueMode = s.active
@@ -133,6 +140,8 @@ class HomeFragment : Fragment() {
 
             when {
                 s.error == null -> Unit
+
+                // 没有权限，需要先打开权限
                 s.error is NoPermissions -> showVpnPermsSheet()
                 else -> showFailureDialog(s.error)
             }
@@ -209,37 +218,45 @@ class HomeFragment : Fragment() {
     }
 
     override fun onResume() {
+        log.v("onResume")
         super.onResume()
         powerButton.start()
     }
 
     override fun onPause() {
+        log.v("onPause")
         powerButton.stop()
         super.onPause()
     }
 
     private fun showVpnPermsSheet() {
+        log.v("showVpnPermsSheet")
         val fragment = AskVpnProfileFragment.newInstance()
         fragment.show(parentFragmentManager, null)
     }
 
     private fun showLocationSheet() {
+        log.v("showLocationSheet")
         val fragment = LocationFragment.newInstance()
         fragment.show(parentFragmentManager, null)
     }
 
     private fun showPlusSheet() {
+        log.v("showPlusSheet")
         val fragment = PaymentFragment.newInstance()
         fragment.show(parentFragmentManager, null)
     }
 
     private fun showFailureDialog(ex: BlokadaException) {
+        log.v("showFailureDialog")
         val additional: Pair<String, () -> Unit>? =
             if (shouldShowKbLink(ex)) getString(R.string.universal_action_learn_more) to {
                 val nav = findNavController()
-                nav.navigate(HomeFragmentDirections.actionNavigationHomeToWebFragment(
-                    Links.tunnelFailure, getString(R.string.universal_action_learn_more)
-                ))
+                nav.navigate(
+                    HomeFragmentDirections.actionNavigationHomeToWebFragment(
+                        Links.tunnelFailure, getString(R.string.universal_action_learn_more)
+                    )
+                )
                 Unit
             }
             else null
@@ -266,7 +283,8 @@ class HomeFragment : Fragment() {
                 nav.navigate(
                     SettingsFragmentDirections.actionNavigationSettingsToWebFragment(
                         Links.donate, getString(R.string.universal_action_donate)
-                    ))
+                    )
+                )
                 true
             }
             else -> false

@@ -21,12 +21,18 @@
 
 package model
 
-class TunnelStatus private constructor (
+class TunnelStatus private constructor(
+    // 激活状态
     val active: Boolean,
+    // 正在打开
     val inProgress: Boolean,
+    // ???
     val isUsingDnsOverHttps: Boolean,
+    // ???
     val gatewayId: GatewayId?,
+    //
     val error: BlokadaException?,
+
     val pauseSeconds: Int
 ) {
 
@@ -85,5 +91,11 @@ class TunnelStatus private constructor (
             pauseSeconds = 0
         )
 
+    }
+
+    override fun toString(): String {
+        return "TunnelStatus(active=$active, inProgress=$inProgress, " +
+                "isUsingDnsOverHttps=$isUsingDnsOverHttps, gatewayId=$gatewayId, " +
+                "error=$error, pauseSeconds=$pauseSeconds)"
     }
 }

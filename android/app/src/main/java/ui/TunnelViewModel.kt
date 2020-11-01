@@ -31,13 +31,17 @@ import utils.Logger
 
 /**
  * This class is responsible for managing the tunnel state and reflecting it on the UI.
+ * 这个类 负责管理 tunnel 的状态，并将其反映到UI上。
  *
  * Mainly used in HomeFragment, but also affecting other parts, like Settings.
  * Warning, this class has the highest chance to be the bloated point of the app.
+ *
+ * 主要被使用在 HomeFragment，但是也会影响其他界面，比如 Settings。
+ * 警告，这个类 大概率 会成为 这个APP的风险点。
  */
-class TunnelViewModel: ViewModel() {
+class TunnelViewModel : ViewModel() {
 
-    private val log = Logger("Blocka")
+    private val log = Logger("TunnelViewModel")
     private val persistence = PersistenceService
     private val engine = EngineService
     private val vpnPerm = VpnPermissionService
@@ -50,10 +54,13 @@ class TunnelViewModel: ViewModel() {
     val tunnelStatus: LiveData<TunnelStatus> = _tunnelStatus.distinctUntilChanged()
 
     init {
+        log.v("init")
         engine.onTunnelStoppedUnexpectedly = this::handleTunnelStoppedUnexpectedly
         viewModelScope.launch {
             val cfg = persistence.load(BlockaConfig::class)
+            log.v("init: BlockaConfig = $cfg")
             _config.value = cfg
+            log.v("init: update TunnelStatus with off")
             TunnelStatus.off().emit()
 
             if (cfg.tunnelEnabled) {
@@ -64,10 +71,15 @@ class TunnelViewModel: ViewModel() {
     }
 
     fun refreshStatus() {
+        log.v("refreshStatus")
         viewModelScope.launch {
             log.v("Querying tunnel status")
+
+            log.v("update TunnelStatus with EngineService getTunnelStatus")
             engine.getTunnelStatus().emit()
+
             _config.value?.let {
+                log.v("BlockaConfig value = $it")
                 if (it.vpnEnabled) {
                     try {
                         lease.checkLease(it)
@@ -81,12 +93,14 @@ class TunnelViewModel: ViewModel() {
     }
 
     fun goToBackground() {
+        log.v("goToBackground")
         viewModelScope.launch {
             engine.goToBackground()
         }
     }
 
     fun turnOn() {
+        log.v("turnOn")
         viewModelScope.launch {
             if (!vpnPerm.hasPermission()) {
                 log.v("Requested to start tunnel, no VPN permissions")
@@ -121,6 +135,7 @@ class TunnelViewModel: ViewModel() {
     }
 
     fun turnOff() {
+        log.v("turnOff")
         viewModelScope.launch {
             log.v("Requested to stop tunnel")
             val s = engine.getTunnelStatus()
@@ -134,7 +149,7 @@ class TunnelViewModel: ViewModel() {
                 } catch (ex: Exception) {
                     handleException(ex)
                 }
-        } else {
+            } else {
                 log.w("Tunnel busy or already stopped")
                 s.emit()
             }
@@ -142,6 +157,7 @@ class TunnelViewModel: ViewModel() {
     }
 
     fun switchGatewayOn() {
+        log.v("switchGatewayOn")
         viewModelScope.launch {
             log.v("Requested to switch gateway on")
             val s = engine.getTunnelStatus()
@@ -178,6 +194,7 @@ class TunnelViewModel: ViewModel() {
     }
 
     fun switchGatewayOff() {
+        log.v("switchGatewayOff")
         viewModelScope.launch {
             log.v("Requested to switch gateway off")
             val s = engine.getTunnelStatus()
@@ -202,6 +219,7 @@ class TunnelViewModel: ViewModel() {
     }
 
     fun changeGateway(gateway: Gateway) {
+        log.v("changeGateway")
         viewModelScope.launch {
             log.v("Requested to change gateway")
             val s = engine.getTunnelStatus()
@@ -232,6 +250,7 @@ class TunnelViewModel: ViewModel() {
     }
 
     fun checkConfigAfterAccountChanged(account: Account) {
+        log.v("checkConfigAfterAccountChanged")
         viewModelScope.launch {
             _config.value?.let {
                 if (account.id != it.keysGeneratedForAccountId) {
@@ -246,6 +265,7 @@ class TunnelViewModel: ViewModel() {
     }
 
     fun clearLease() {
+        log.v("clearLease")
         viewModelScope.launch {
             log.v("Clearing lease")
             _config.value?.copy(vpnEnabled = false, lease = null, gateway = null)?.emit()
@@ -271,6 +291,7 @@ class TunnelViewModel: ViewModel() {
 
     private var turnedOnAfterStartedBySystem = false
     fun turnOnWhenStartedBySystem() {
+        log.v("turnOnWhenStartedBySystem:turnedOnAfterStartedBySystem = $turnedOnAfterStartedBySystem")
         viewModelScope.launch {
             _tunnelStatus.value?.let { status ->
                 if (!status.inProgress && !turnedOnAfterStartedBySystem) {
@@ -283,6 +304,7 @@ class TunnelViewModel: ViewModel() {
     }
 
     fun setInformedUserAboutError() {
+        log.v("setInformedUserAboutError")
         viewModelScope.launch {
             log.v("User has been informed about the error")
             engine.getTunnelStatus().emit()
@@ -303,6 +325,7 @@ class TunnelViewModel: ViewModel() {
     }
 
     private fun handleTunnelStoppedUnexpectedly(ex: BlokadaException) {
+        log.v("handleTunnelStoppedUnexpectedly")
         viewModelScope.launch {
             log.e("Engine reports tunnel stopped unexpectedly".cause(ex))
             TunnelStatus.error(ex).emit()
@@ -311,6 +334,7 @@ class TunnelViewModel: ViewModel() {
     }
 
     private suspend fun newKeypair(accountId: AccountId) {
+        log.v("newKeypair: accountId = $accountId")
         _config.value?.let {
             try {
                 log.w("Generating new keypair")
@@ -330,6 +354,7 @@ class TunnelViewModel: ViewModel() {
     }
 
     private fun updateLiveData(config: BlockaConfig) {
+        log.v("updateLiveData:config=$config")
         persistence.save(config)
         viewModelScope.launch {
             _config.value = config

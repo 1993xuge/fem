@@ -34,12 +34,17 @@ import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.lang.Exception
 
+// 存储 服务
 
 interface StorageService {
+    // 存储数据
     fun save(key: String, data: String)
+
+    // 加载数据
     fun load(key: String): String?
 }
 
+// SharedPreference 存储
 object SharedPreferencesStorageService : StorageService {
 
     private val context = ContextService
@@ -55,6 +60,7 @@ object SharedPreferencesStorageService : StorageService {
         PreferenceManager.getDefaultSharedPreferences(context.requireContext())
     }
 
+    // local
     private val localSharedPreferences by lazy {
         val ctx = context.requireContext()
         ctx.getSharedPreferences("local", Context.MODE_PRIVATE)
@@ -90,7 +96,7 @@ object SharedPreferencesStorageService : StorageService {
 
 }
 
-
+// 文件存储
 object FileStorageService : StorageService {
 
     private val file = FileService
