@@ -34,7 +34,11 @@ import java.net.InetSocketAddress
 import java.net.Socket
 
 /**
+ *
+ * 性能监控的Service
+ *
  * Monitoring performance of a packet loop (any implementation).
+ * 监视数据包循环的性能（任何实现）。
  *
  * Will measure DNS query RTT, and count recoverable errors (like network IO errors). If too many
  * errors happen in a short amount of time, it fire onNoConnectivity() event (and cause a restart by
@@ -89,6 +93,7 @@ object MetricsService {
         }
     }
 
+    // 收到错误的方法。当 收到的错误次数 大于 50s，就认为 当前是 onNoConnectivity
     fun onRecoverableError(ex: BlokadaException) {
         log.w("Recoverable error occurred (${++errorCounter}): ${ex.localizedMessage}")
         if (errorCounter >= MAX_RECENT_ERRORS) {
@@ -97,8 +102,10 @@ object MetricsService {
         }
     }
 
+    // 一次 dns 查询开始了
     fun onDnsQueryStarted(sequence: Short) {
         if (hadAtLeastOneSuccessfulQuery && ++oneWayDnsCounter >= MAX_ONE_WAY_DNS_REQUESTS) {
+            // 已经成功获取了 一次查询，并且 一个 网管查询的次数 大于 30次，直接 返回 onNoConnectivity
             log.e("Connectivity lost, $oneWayDnsCounter DNS requests without a response")
             onNoConnectivity()
         }
@@ -109,6 +116,7 @@ object MetricsService {
         }
     }
 
+    // 一次 dns 查询结束了
     fun onDnsQueryFinished(sequence: Short) {
         oneWayDnsCounter = 0
         if (sequence == id) {
@@ -155,7 +163,10 @@ object MetricsService {
                 log.e("Timeout pinging home")
                 onNoConnectivity()
             } finally {
-                try { socket.close() } catch (e: Exception) {}
+                try {
+                    socket.close()
+                } catch (e: Exception) {
+                }
             }
         }
     }

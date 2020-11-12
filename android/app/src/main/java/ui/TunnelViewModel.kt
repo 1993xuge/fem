@@ -56,6 +56,7 @@ class TunnelViewModel : ViewModel() {
     init {
         log.v("init")
         engine.onTunnelStoppedUnexpectedly = this::handleTunnelStoppedUnexpectedly
+
         viewModelScope.launch {
             val cfg = persistence.load(BlockaConfig::class)
             log.v("init: BlockaConfig = $cfg")
@@ -64,7 +65,8 @@ class TunnelViewModel : ViewModel() {
             TunnelStatus.off().emit()
 
             if (cfg.tunnelEnabled) {
-                log.w("Starting tunnel after app start, as it was active before")
+                // 之前 是 打开的状态，所以 现在 也需要 打开
+                log.w("init: Starting tunnel after app start, as it was active before")
                 turnOnWhenStartedBySystem()
             }
         }
@@ -102,18 +104,27 @@ class TunnelViewModel : ViewModel() {
     fun turnOn() {
         log.v("turnOn")
         viewModelScope.launch {
+            // 先 检查是否有vpn的权限
             if (!vpnPerm.hasPermission()) {
+                // 没有权限。将状态 更新为没权限，再关闭
                 log.v("Requested to start tunnel, no VPN permissions")
                 TunnelStatus.noPermissions().emit()
                 TunnelStatus.off().emit()
             } else {
                 log.v("Requested to start tunnel")
+                // 从 Engin中 获取权限
                 val s = engine.getTunnelStatus()
+                log.v("turnOn: TunnelStatus from engin = $s")
+
+                // 没有处在 激活状态，并且 不是 正在 打开的状态
                 if (!s.inProgress && !s.active) {
                     try {
+                        // 将 状态更新为 正在进行中
                         TunnelStatus.inProgress().emit()
                         val cfg = _config.value ?: throw BlokadaException("Config not set")
+                        log.v("turnOn : cfg = $cfg")
                         if (cfg.vpnEnabled) {
+                            // 开启 vpn
                             engine.startTunnel(cfg.lease)
                             engine.connectVpn(cfg)
                             lease.checkLease(cfg)
@@ -293,10 +304,11 @@ class TunnelViewModel : ViewModel() {
     fun turnOnWhenStartedBySystem() {
         log.v("turnOnWhenStartedBySystem:turnedOnAfterStartedBySystem = $turnedOnAfterStartedBySystem")
         viewModelScope.launch {
+            log.v("turnOnWhenStartedBySystem:_tunnelStatus = ${_tunnelStatus.value}")
             _tunnelStatus.value?.let { status ->
                 if (!status.inProgress && !turnedOnAfterStartedBySystem) {
                     turnedOnAfterStartedBySystem = true
-                    log.w("System requested to start tunnel, setting up")
+                    log.w("turnOnWhenStartedBySystem: System requested to start tunnel, setting up")
                     turnOn()
                 }
             }

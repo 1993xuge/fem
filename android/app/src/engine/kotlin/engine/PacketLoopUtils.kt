@@ -32,6 +32,9 @@ import java.nio.ByteBuffer
 import java.util.*
 import kotlin.experimental.and
 
+/**
+ * 数据代理
+ */
 internal class Forwarder(private val ttl: Long = 10 * 1000): Iterable<ForwardRule> {
 
     private val log = Logger("PLForwarder")
@@ -78,6 +81,7 @@ internal class Forwarder(private val ttl: Long = 10 * 1000): Iterable<ForwardRul
 
 internal data class ForwardRule(
     val socket: DatagramSocket,
+    // 原始数据包
     val originEnvelope: Packet,
     val pipe: StructPollfd,
     val fd: ParcelFileDescriptor,

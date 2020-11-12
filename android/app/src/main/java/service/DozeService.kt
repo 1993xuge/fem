@@ -29,6 +29,11 @@ import android.os.PowerManager
 import model.BlokadaException
 import utils.Logger
 
+/**
+ * 监控系统 是否 处于空闲状态。
+ *
+ * 当状态发生变化时，通过 onDozeChanged 响应
+ */
 object DozeService {
 
     private val log = Logger("Doze")
@@ -42,14 +47,17 @@ object DozeService {
         log.v("Registered DozeReceiver")
     }
 
+    // 设备是否 处于 空闲模式。这种情况发生在设备未使用并且没有长时间不动的情况下，因此它决定进入低功耗状态。
     fun isDoze() = powerManager.isDeviceIdleMode
 
+    // 系统设备 空闲状态发生变化
     internal fun dozeChanged() {
         val doze = powerManager.isDeviceIdleMode
         log.v("Doze changed: $doze")
         onDozeChanged(doze)
     }
 
+    // 确保在 非空闲状态
     fun ensureNotDoze() {
         if (isDoze()) throw BlokadaException("Doze mode detected")
     }

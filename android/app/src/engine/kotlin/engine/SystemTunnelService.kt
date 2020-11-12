@@ -28,6 +28,7 @@ import android.content.ServiceConnection
 import android.net.VpnService
 import android.os.IBinder
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
 import model.BlokadaException
 import model.TunnelStatus
 import service.ContextService
@@ -90,10 +91,12 @@ object SystemTunnelService {
     }
 
     fun protectSocket(socket: DatagramSocket) {
+        // 直接 将 DatagramSocket 中的数据包 发出去，而不走 vpn代理
         tunnel?.protect(socket) ?: log.e("No tunnel reference while called protectSocket()")
     }
 
     fun protectSocket(socket: Socket) {
+        // 直接 将 socket 中的数据包 发出去，而不走 vpn代理
         tunnel?.protect(socket) ?: log.e("No tunnel reference while called protectSocket()")
     }
 
@@ -101,8 +104,11 @@ object SystemTunnelService {
         return connection ?: run {
             val deferred = CompletableDeferred<SystemTunnelBinder>()
             val connection = bind(deferred)
+
+            // 等待 Service 绑定成功后，唤醒
             deferred.await()
             log.v("Bound SystemTunnel")
+
             this.connection = connection
             this.tunnel = connection.binder.tunnel
             connection
@@ -116,7 +122,10 @@ object SystemTunnelService {
             action = SYSTEM_TUNNEL_BINDER_ACTION
         }
 
-        val connection = SystemTunnelConnection(deferred, { onConfigureTunnel(it) },
+        val connection = SystemTunnelConnection(deferred,
+            onConfigureTunnel = {
+                this.onConfigureTunnel(it)
+            },
             onTunnelClosed = {
                 log.w("Tunnel got closed, unbinding (if bound)")
                 unbind()
@@ -125,11 +134,13 @@ object SystemTunnelService {
             onConnectionClosed = {
                 this.connection = null
             })
-        if (!ctx.bindService(intent, connection,
-                Context.BIND_AUTO_CREATE or Context.BIND_ABOVE_CLIENT or Context.BIND_IMPORTANT
-        )) {
+
+        val flag = Context.BIND_AUTO_CREATE or Context.BIND_ABOVE_CLIENT or Context.BIND_IMPORTANT
+        if (!ctx.bindService(intent, connection, flag)) {
             deferred.completeExceptionally(BlokadaException("Could not bindService()"))
         } else {
+
+
 //            delay(3000)
 //            if (!deferred.isCompleted) deferred.completeExceptionally(
 //                BlokadaException("Timeout waiting for bindService()")
@@ -159,7 +170,7 @@ private class SystemTunnelConnection(
     var onConfigureTunnel: (vpn: VpnService.Builder) -> Unit,
     var onTunnelClosed: (exception: BlokadaException?) -> Unit,
     val onConnectionClosed: () -> Unit
-): ServiceConnection {
+) : ServiceConnection {
 
     private val log = Logger("SystemTunnel")
 

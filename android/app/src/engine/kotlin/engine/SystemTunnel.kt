@@ -58,6 +58,7 @@ class SystemTunnel : VpnService() {
         log.v("onStartCommand received: $this, intent: $intent")
 
         if (!reactedToStart) {
+            // 此处的目的是 为了 初始化 TunnelViewModel,只有第一次 创建 才需要
             // System calls us twice in a row on boot
             reactedToStart = true
 
@@ -103,11 +104,16 @@ class SystemTunnel : VpnService() {
     fun queryConfig() = config
 
     fun turnOn(): SystemTunnelConfig {
+
         log.v("Tunnel turnOn() called")
-        val tunnel = super.Builder()
-        binder { it.onConfigureTunnel(tunnel) }
+        val tunnelBuilder = super.Builder()
+        // 配置 VPN
+        binder { it.onConfigureTunnel(tunnelBuilder) }
+
         log.v("Asking system for tunnel")
-        val descriptor = tunnel.establish() ?: throw BlokadaException("Tunnel establish() returned no fd")
+        // 通过 builder 打开 Vpn连接
+        val descriptor = tunnelBuilder.establish() ?: throw BlokadaException("Tunnel establish() returned no fd")
+
         val fd = descriptor.fileDescriptor
         val config = SystemTunnelConfig(descriptor, FileInputStream(fd), FileOutputStream(fd))
         this.config = config

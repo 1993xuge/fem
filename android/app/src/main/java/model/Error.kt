@@ -29,6 +29,8 @@ open class BlokadaException(msg: String, cause: Throwable? = null): Exception(ms
 
 class TooManyDevices(cause: Throwable? = null): BlokadaException("Too many devices", cause)
 class SystemTunnelRevoked: BlokadaException("Revoked")
+
+// 没有永久账户
 class NoPersistedAccount: BlokadaException("No persisted account")
 class NoPermissions: BlokadaException("No VPN profile permissions")
 class TunnelFailure(cause: Throwable): BlokadaException("Tunnel failure: ${cause.message}", cause)

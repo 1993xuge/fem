@@ -43,6 +43,10 @@ data class Dns(
             label : String
         ) = Dns(id, ips, null, null, null, label)
     }
+
+    override fun toString(): String {
+        return "Dns(id='$id', ips=$ips, port=$port, name=$name, path=$path, label='$label', canUseInPlaintext=$canUseInPlaintext)"
+    }
 }
 
 @JsonClass(generateAdapter = true)

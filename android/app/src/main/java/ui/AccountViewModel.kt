@@ -35,17 +35,18 @@ import service.PersistenceService
 import ui.utils.cause
 import utils.Logger
 
-class AccountViewModel: ViewModel() {
+class AccountViewModel : ViewModel() {
 
     private val log = Logger("Account")
-    private val blocka = BlockaRepository
+    private val blockaRepository = BlockaRepository
     private val persistence = PersistenceService
     private val alert = AlertDialogService
     private val connectivity = ConnectivityService
 
     private val _account = MutableLiveData<Account>()
     val account: LiveData<Account> = _account
-    val accountExpiration: LiveData<ActiveUntil> = _account.map { it.active_until }.distinctUntilChanged()
+    val accountExpiration: LiveData<ActiveUntil> =
+        _account.map { it.active_until }.distinctUntilChanged()
 
     init {
         viewModelScope.launch {
@@ -56,12 +57,13 @@ class AccountViewModel: ViewModel() {
 
     fun restoreAccount(accountId: AccountId) {
         viewModelScope.launch {
-            log.w("Restoring account")
+            log.w("restoreAccount: accountId = $accountId")
             try {
-                val account = blocka.fetchAccount(accountId)
+                val account = blockaRepository.fetchAccount(accountId)
+                log.w("restoreAccount: after fetch account with accountId, account = $accountId")
                 updateLiveData(account)
             } catch (ex: BlokadaException) {
-                log.e("Failed restoring account".cause(ex))
+                log.e("restoreAccount: Failed restoring account".cause(ex))
                 updateLiveData(persistence.load(Account::class))
                 alert.showAlert(R.string.error_account_inactive_after_restore)
             }
@@ -71,32 +73,40 @@ class AccountViewModel: ViewModel() {
     fun refreshAccount() {
         viewModelScope.launch {
             try {
-                log.v("Refreshing account")
+                log.v("refreshAccount: Refreshing account")
                 refreshAccountInternal()
             } catch (ex: BlokadaException) {
                 when {
                     connectivity.isDeviceInOfflineMode() ->
-                        log.w("Could not refresh account but device is offline, ignoring")
+                        log.w("refreshAccount: Could not refresh account but device is offline, ignoring")
                     else -> {
-                        log.w("Could not refresh account, TODO".cause(ex))
+                        log.w("refreshAccount: Could not refresh account, TODO".cause(ex))
                     }
                 }
 
                 try {
-                    log.v("Returning persisted copy")
+                    log.v("refreshAccount: Returning persisted copy")
+
+                    // 从本地 获取 Account信息
                     updateLiveData(persistence.load(Account::class))
-                } catch (ex: Exception) {}
+                } catch (ex: Exception) {
+                    log.w("refreshAccount: load Account Exception ".cause(ex))
+                }
             }
         }
     }
 
     fun checkAccount() {
+        log.w("checkAccount")
         viewModelScope.launch {
-            if (!hasAccount())
+            val hasAccount = hasAccount()
+            log.w("checkAccount: hasAccount = $hasAccount")
+            if (!hasAccount)
                 try {
+                    log.w("checkAccount: createAccount")
                     createAccount()
                 } catch (ex: Exception) {
-                    log.w("Could not create account".cause(ex))
+                    log.w("checkAccount: Could not create account".cause(ex))
                     alert.showAlert(R.string.error_creating_account)
                 }
         }
@@ -105,24 +115,33 @@ class AccountViewModel: ViewModel() {
     private fun hasAccount() = try {
         persistence.load(Account::class)
         true
-    } catch (ex: Exception) { false }
+    } catch (ex: Exception) {
+        false
+    }
 
     private suspend fun createAccount(): Account {
-        log.w("Creating new account")
-        val account = blocka.createAccount()
+        log.w("createAccount: Creating new account")
+        val account = blockaRepository.createAccount()
+        log.w("createAccount: account = $account")
         updateLiveData(account)
         return account
     }
 
     private suspend fun refreshAccountInternal(): Account {
         val accountId = _account.value?.id ?: persistence.load(Account::class).id
-        val account = blocka.fetchAccount(accountId)
+        log.v("refreshAccountInternal: accountId = $accountId")
+
+        val account = blockaRepository.fetchAccount(accountId)
+        log.v("refreshAccountInternal: after fetchAccount: account = $account")
+
         updateLiveData(account)
-        log.v("Account refreshed")
+        log.v("refreshAccountInternal: Account refreshed")
+
         return account
     }
 
     private fun updateLiveData(account: Account) {
+        log.w("updateLiveData: update Account LiveData And Save it")
         persistence.save(account)
         viewModelScope.launch {
             _account.value = account

@@ -71,6 +71,7 @@ object PersistenceService {
 
                 Account::class -> {
                     val legacy = LegacyAccountImport.importLegacyAccount()
+                    log.v("load: Account, legacy= $legacy")
                     if (legacy != null) {
                         save(legacy) // To save in the current format
                         legacy to PassthroughSerializationService

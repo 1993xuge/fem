@@ -89,22 +89,23 @@ android {
 
     productFlavors {
         full {
-            // full lands on blokada.org.
+            // full lands on blokada.org. 包含全部的功能
             applicationId "org.blokada.origin.alarm"
         }
 
         community {
-            // community lands on F-Droid and XDA Labs.
+            // community lands on F-Droid and XDA Labs. 社区版本
             applicationId "org.blokada.alarm"
         }
 
         google {
-            // google build lands on Google Play, missing some features.
+            // google build lands on Google Play, missing some features. google play上架的版本
             applicationId "org.blokada.alarm.dnschanger"
         }
 
         escaped {
             // escaped build can be installed on top of google build to get all features.
+            // 为了 躲避 google play的版本，全功能
             applicationId "org.blokada.alarm.dnschanger"
         }
     }

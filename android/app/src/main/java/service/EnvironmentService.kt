@@ -27,6 +27,9 @@ import org.blokada.BuildConfig
 
 object EnvironmentService {
 
+    /**
+     * 设备别名， 品牌+型号
+     */
     fun getDeviceAlias(): String {
         val brand = Build.MANUFACTURER
         val model = Build.MODEL
@@ -43,13 +46,16 @@ object EnvironmentService {
         val flavor = getFlavor()
         val touch = if (isSupportingTouch()) "touch" else "donttouch"
         val compatible = if (isCompatible()) "compatible" else "incompatible"
+
         return "blokada/$version (android-$androidVersion $flavor $type $arch $brand $device $touch api $compatible)"
     }
 
+    // 是否是 release
     fun isPublicBuild(): Boolean {
         return BuildConfig.BUILD_TYPE == "release"
     }
 
+    // 渠道是 google 并且  不是 逃避版本，也就是 被阉割的版本
     fun isSlim(): Boolean {
         return BuildConfig.FLAVOR == "google" && !escaped
     }
@@ -64,6 +70,7 @@ object EnvironmentService {
 
     fun getVersionCode() = BuildConfig.VERSION_CODE
 
+    // 目前使用 别名作为设备id
     fun getDeviceId(): DeviceId {
         return getDeviceAlias() // TODO: more unique
     }

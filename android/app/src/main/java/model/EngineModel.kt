@@ -37,6 +37,7 @@ class TunnelStatus private constructor(
 ) {
 
     companion object {
+        // 开关关闭状态
         fun off() = TunnelStatus(
             active = false,
             inProgress = false,
@@ -46,6 +47,7 @@ class TunnelStatus private constructor(
             pauseSeconds = 0
         )
 
+        // 开关正在进行的状态
         fun inProgress() = TunnelStatus(
             active = false,
             inProgress = true,
@@ -55,6 +57,7 @@ class TunnelStatus private constructor(
             pauseSeconds = 0
         )
 
+        // ???
         fun filteringOnly(doh: Boolean = false) = TunnelStatus(
             active = true,
             inProgress = false,
@@ -64,6 +67,7 @@ class TunnelStatus private constructor(
             pauseSeconds = 0
         )
 
+        // 已连接 状态
         fun connected(gatewayId: GatewayId) = TunnelStatus(
             active = true,
             inProgress = false,
@@ -73,6 +77,7 @@ class TunnelStatus private constructor(
             pauseSeconds = 0
         )
 
+        // 没有权限
         fun noPermissions() = TunnelStatus(
             active = false,
             inProgress = false,
@@ -82,6 +87,7 @@ class TunnelStatus private constructor(
             pauseSeconds = 0
         )
 
+        // 异常
         fun error(ex: BlokadaException) = TunnelStatus(
             active = false,
             inProgress = false,

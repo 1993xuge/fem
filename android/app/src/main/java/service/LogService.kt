@@ -114,9 +114,13 @@ object LogService {
         openFileIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
         openFileIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         openFileIntent.type = "plain/*"
-        openFileIntent.putExtra(Intent.EXTRA_STREAM,
-            FileProvider.getUriForFile(ctx, "${ctx.packageName}.files",
-                uri))
+        openFileIntent.putExtra(
+            Intent.EXTRA_STREAM,
+            FileProvider.getUriForFile(
+                ctx, "${ctx.packageName}.files",
+                uri
+            )
+        )
         ctx.startActivity(openFileIntent)
     }
 

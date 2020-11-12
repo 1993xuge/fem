@@ -30,10 +30,19 @@ object BlockaRepository {
 
     private val dataSource = BlockaDataSource
 
+    // 通过 retrofit （/v1/account） 创建 Account
     suspend fun createAccount() = dataSource.postAccount()
+
+    // 通过 retrofit （/v1/account） 获取 Account
     suspend fun fetchAccount(accountId: AccountId) = dataSource.getAccount(accountId)
+
+    // 通过 retrofit （/v2/gateway） 获取网关信息
     suspend fun fetchGateways() = dataSource.getGateways()
+
+    //  通过 retrofit （/v1/lease） 获取 Lease 信息
     suspend fun fetchLeases(accountId: AccountId) = dataSource.getLeases(accountId)
+
+    //  通过 retrofit （/v1/lease） 获取 Lease 信息
     suspend fun createLease(leaseRequest: LeaseRequest) = dataSource.postLease(leaseRequest)
 
     suspend fun deleteLease(accountId: AccountId, lease: Lease) = dataSource.deleteLease(

@@ -51,7 +51,7 @@ data class Account(
     fun isActive() = active_until > Date()
 
     override fun toString(): String {
-        return "Account(activeUntil=$active_until)"
+        return "Account(id='$id', active_until=$active_until)"
     }
 }
 
@@ -69,7 +69,13 @@ data class Gateway(
     fun niceName() = location.split('-').map { it.capitalize() }.joinToString(" ")
     fun overloaded() = resource_usage_percent >= 100
 
+    override fun toString(): String {
+        return "Gateway(public_key='$public_key', region='$region', location='$location', resource_usage_percent=$resource_usage_percent, ipv4='$ipv4', ipv6='$ipv6', port=$port, tags=$tags)"
+    }
+
     companion object {}
+
+
 }
 
 @JsonClass(generateAdapter = true)
@@ -87,8 +93,7 @@ data class Lease(
     fun isActive() = expires > Date()
 
     override fun toString(): String {
-        // No account ID
-        return "Lease(publicKey='$public_key', gatewayId='$gateway_id', expires=$expires, alias=$alias, vip4='$vip4', vip6='$vip6')"
+        return "Lease(account_id='$account_id', public_key='$public_key', gateway_id='$gateway_id', expires=$expires, alias=$alias, vip4='$vip4', vip6='$vip6')"
     }
 
     companion object {}
@@ -102,8 +107,7 @@ data class LeaseRequest(
     val alias: String
 ) {
     override fun toString(): String {
-        // No account ID
-        return "LeaseRequest(publicKey='$public_key', gatewayId='$gateway_id', alias='$alias')"
+        return "LeaseRequest(account_id='$account_id', public_key='$public_key', gateway_id='$gateway_id', alias='$alias')"
     }
 }
 

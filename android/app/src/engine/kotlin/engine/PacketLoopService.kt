@@ -36,7 +36,6 @@ object PacketLoopService {
 
     private val log = Logger("PacketLoop")
     private val connectivity = ConnectivityService
-    private val doze = DozeService
 
     var onCreateSocket = {
         log.e("Created unprotected socket for the packet loop")
@@ -66,6 +65,7 @@ object PacketLoopService {
         }
     }
 
+    // 开启 游客模式
     suspend fun startLibreMode(useDoh: Boolean, dns: Dns, tunnelConfig: SystemTunnelConfig) {
         log.v("Requested to start packet loop (libre mode)")
         if (loop != null) {
@@ -152,6 +152,7 @@ object PacketLoopService {
         )
     }
 
+    // 意外停止
     private fun stopUnexpectedly() {
         loop?.let {
             log.w("Packet loop stopped unexpectedly")
@@ -187,6 +188,7 @@ object PacketLoopService {
 }
 
 private class PacketLoopConfig(
+    // 高级模式
     val usePlusMode: Boolean,
     val dns: Dns,
     val useDoh: Boolean,

@@ -29,6 +29,9 @@ import model.BlokadaException
 import model.Uri
 import utils.Logger
 
+/**
+ * 黑名单
+ */
 object BlocklistService {
 
     private const val DEFAULT_BLOCKLIST = "default_blocklist.zip"
@@ -38,24 +41,37 @@ object BlocklistService {
 
     private val log = Logger("Blocklist")
     private val http = HttpService
-    private val file = FileService
+    private val fileService = FileService
     private val context = ContextService
 
     suspend fun setup() {
-        val destination = file.commonDir().file(MERGED_BLOCKLIST)
-        if (!file.exists(destination)) {
+        val destination = fileService.commonDir().file(MERGED_BLOCKLIST)
+        log.w("setup: destination = $destination")
+        if (!fileService.exists(destination)) {
+            // merged_blocklist 文件不存在
             log.w("Initiating default blocklist files")
-            val allowed = file.commonDir().file(USER_ALLOWED)
-            file.save(allowed, "")
 
-            val denied = file.commonDir().file(USER_DENIED)
-            file.save(denied, "")
+            // 被允许的列表, 将 allowed文件中的内容清空
+            val allowed = fileService.commonDir().file(USER_ALLOWED)
+            fileService.save(allowed, "")
+            log.w("setup: allowed = $allowed")
 
-            val default = file.commonDir().file(DEFAULT_BLOCKLIST)
+            // 不被允许的列表, 将 denied 文件中的内容清空
+            val denied = fileService.commonDir().file(USER_DENIED)
+            fileService.save(denied, "")
+            log.w("setup: denied = $denied")
+
+            // 打开 default_blocklist.zip 文件，并将其解压缩
+            val default = fileService.commonDir().file(DEFAULT_BLOCKLIST)
+            log.w("setup: default = $default")
             val asset = context.requireAppContext().assets.open(DEFAULT_BLOCKLIST)
             val decodedAsset = ZipService.decodeStream(asset, key = DEFAULT_BLOCKLIST)
-            file.save(source = decodedAsset, destination = default)
-            file.merge(listOf(default), destination)
+
+            fileService.save(source = decodedAsset, destination = default)
+
+            // 将 default_blocklist.zip 中的内容 merge 到 merged_blocklist
+            fileService.merge(listOf(default), destination)
+
             sanitize(destination)
         }
     }
@@ -64,6 +80,7 @@ object BlocklistService {
         log.v("Starting download of ${urls.size} urls")
         coroutineScope {
             for (url in urls) {
+                log.v("downloadAll: url = $url")
                 if (!hasDownloaded(url))
                     launch(Dispatchers.IO) {
                         download(url)
@@ -80,18 +97,18 @@ object BlocklistService {
 
         if (destinations.isEmpty()) {
             log.w("No selected blocklists, using default")
-            destinations += file.commonDir().file(DEFAULT_BLOCKLIST)
+            destinations += fileService.commonDir().file(DEFAULT_BLOCKLIST)
         }
 
-        val userDenied = file.commonDir().file(USER_DENIED)
-        if (file.exists(userDenied)) {
+        val userDenied = fileService.commonDir().file(USER_DENIED)
+        if (fileService.exists(userDenied)) {
             // Always include user blocklist (whitelist is included using engine api)
             log.v("Including user denied list")
             destinations += userDenied
         }
 
-        val merged = file.commonDir().file(MERGED_BLOCKLIST)
-        file.merge(destinations, merged)
+        val merged = fileService.commonDir().file(MERGED_BLOCKLIST)
+        fileService.merge(destinations, merged)
         sanitize(merged)
 
         log.v("Done merging")
@@ -106,26 +123,26 @@ object BlocklistService {
     }
 
     fun loadMerged(): List<String> {
-        return file.load(file.commonDir().file(MERGED_BLOCKLIST))
+        return fileService.load(fileService.commonDir().file(MERGED_BLOCKLIST))
     }
 
     fun loadUserAllowed(): List<String> {
-        return file.load(file.commonDir().file(USER_ALLOWED))
+        return fileService.load(fileService.commonDir().file(USER_ALLOWED))
     }
 
     fun loadUserDenied(): List<String> {
-        return file.load(file.commonDir().file(USER_DENIED))
+        return fileService.load(fileService.commonDir().file(USER_DENIED))
     }
 
     private fun sanitize(list: Uri) {
         log.v("Sanitizing list: $list")
-        val content = file.load(list).sorted().distinct().toMutableList()
+        val content = fileService.load(list).sorted().distinct().toMutableList()
         var i = content.count()
         while (--i >= 0) {
             if (!isLineOk(content[i])) content.removeAt(i)
             else content[i] = removeIp(content[i]).trim()
         }
-        file.save(list, content)
+        fileService.save(list, content)
         log.v("Sanitizing done, left ${content.size} lines")
     }
 
@@ -142,12 +159,12 @@ object BlocklistService {
     }
 
     private fun hasDownloaded(url: Uri): Boolean {
-        return file.exists(getDestination(url))
+        return fileService.exists(getDestination(url))
     }
 
     private fun remove(url: Uri) {
         log.v("Removing blocklist file for: $url")
-        file.remove(getDestination(url))
+        fileService.remove(getDestination(url))
     }
 
     private suspend fun download(url: Uri) {
@@ -155,7 +172,7 @@ object BlocklistService {
         val destination = getDestination(url)
         try {
             val content = http.makeRequest(url)
-            file.save(destination, content)
+            fileService.save(destination, content)
         } catch (ex: Exception) {
             remove(url)
             throw BlokadaException("Could not fetch domains for: $url")
@@ -164,7 +181,7 @@ object BlocklistService {
 
     private fun getDestination(url: Uri): Uri {
         val filename = encodeToString(url.toByteArray(), NO_WRAP)
-        return file.commonDir().file(filename)
+        return fileService.commonDir().file(filename)
     }
 
 }

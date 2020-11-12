@@ -37,12 +37,15 @@ object DnsMapperService {
     private var useProxyDns = false
 
     fun setDns(dns: Dns, doh: Boolean) {
-        log.v("Using DNS configuration (DoH: $doh): $dns")
+        log.v("setDns: Using DNS configuration (DoH: $doh): $dns")
         servers = dns.ips.ipv4().map { Inet4Address.getByName(it) }
 
+        servers.forEach { log.v("setDns: service = $it") }
+
         useProxyDns = false
+
         if (dns.isDnsOverHttps() && doh) {
-            log.v("Will use DNS over HTTPS")
+            log.v("setDns: Will use DNS over HTTPS")
             useProxyDns = true
         }
     }

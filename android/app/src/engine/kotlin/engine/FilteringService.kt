@@ -35,15 +35,29 @@ internal object FilteringService {
     private val stats = StatsService
     private val scope = GlobalScope
 
+    // 所有可以 blocked 的 Host
     private var merged = emptyList<Host>()
+
+    // 用户 主动允许的 Host
     private var userAllowed = emptyList<Host>()
+
+    // 用户 主动拒绝的 Host
     private var userDenied = emptyList<Host>()
 
     fun reload() {
         log.v("Reloading blocklist")
         merged = blocklist.loadMerged()
+//        log.w("-------------------------")
+//        merged.forEach { log.w("reload: merged = $it") }
+
         userAllowed = blocklist.loadUserAllowed()
+//        log.w("-------------------------")
+//        userAllowed.forEach { log.w("reload: userAllowed = $it") }
+
         userDenied = blocklist.loadUserDenied()
+//        log.w("-------------------------")
+//        userDenied.forEach { log.w("reload: userDenied = $it") }
+
         log.v("Reloaded: ${merged.size} hosts, + user: ${userDenied.size} denied, ${userAllowed.size} allowed")
     }
 
@@ -56,9 +70,11 @@ internal object FilteringService {
 
     fun denied(host: Host): Boolean {
         return if (userDenied.contains(host)) {
+            // 用户主动拒绝
             scope.launch(Dispatchers.Main) { stats.blockedDenied(host) }
             true
         } else if (merged.contains(host)) {
+            // 可以拒绝
             scope.launch(Dispatchers.Main) { stats.blocked(host) }
             true
         } else {
