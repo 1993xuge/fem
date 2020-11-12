@@ -27,6 +27,9 @@ import model.Dns
 import model.isDnsOverHttps
 import utils.Logger
 
+/**
+ * 专门为 doh
+ */
 object BlockaDnsService {
 
     const val PROXY_PORT: Short = 8573
@@ -35,7 +38,7 @@ object BlockaDnsService {
     private var started = false
 
     fun startDnsProxy(dns: Dns) {
-        log.v("Starting DoH DNS proxy")
+        log.v("Starting DoH DNS proxy: dns = $dns")
         if (!dns.isDnsOverHttps()) throw BlokadaException("Attempted to start DoH DNS proxy for non-DoH dns entry")
         val name = dns.name!!
         val path = dns.path!!

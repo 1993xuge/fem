@@ -124,7 +124,8 @@ object EngineService {
     }
 
     suspend fun startTunnel(lease: Lease?) {
-        log.w("startTunnel: lease = $lease")
+
+        log.w("startTunnel: lease = $lease  isSlim = ${EnvironmentService.isSlim()}}")
         status = TunnelStatus.inProgress()
         this.lease = lease
 
@@ -133,17 +134,18 @@ object EngineService {
             lease == null && EnvironmentService.isSlim() -> {
                 val useDoh = useDoh(dns)
                 dnsMapperService.setDns(dns, useDoh)
+
                 if (useDoh) blockaDnsService.startDnsProxy(dns)
-//                systemTunnel.onConfigureTunnel = { tun ->
-//                    configurator.forSlim(tun, useDoh, dns)
-//                }
-//                systemTunnel.open()
-//                status = TunnelStatus.filteringOnly(useDoh)
+
+                // 系统配置 vpn时的回调
                 systemTunnelService.onConfigureTunnel = { tun ->
                     val ipv6 = PersistenceService.load(LocalConfig::class).ipv6
                     systemTunnelConfigurator.forLibre(tun, dns, ipv6)
                 }
+
+                // 打开 系统 vpn
                 val tunnelConfig = systemTunnelService.open()
+
                 packetLoopService.startSlimMode(useDoh, dns, tunnelConfig)
                 status = TunnelStatus.filteringOnly(useDoh)
             }
@@ -151,11 +153,14 @@ object EngineService {
             lease == null -> {
                 val useDoh = useDoh(dns)
                 dnsMapperService.setDns(dns, useDoh)
+
                 if (useDoh) blockaDnsService.startDnsProxy(dns)
+
                 systemTunnelService.onConfigureTunnel = { tun ->
                     val ipv6 = PersistenceService.load(LocalConfig::class).ipv6
                     systemTunnelConfigurator.forLibre(tun, dns, ipv6)
                 }
+
                 val tunnelConfig = systemTunnelService.open()
                 packetLoopService.startLibreMode(useDoh, dns, tunnelConfig)
                 status = TunnelStatus.filteringOnly(useDoh)
