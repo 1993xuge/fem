@@ -106,32 +106,40 @@ object PacketLoopService {
     private fun createLoop(config: PacketLoopConfig): Pair<PacketLoopConfig, Thread> {
         val thread = when {
             config.usePlusMode && config.useDoh -> {
+                // 高级模式，并且 使用 doh
                 val gw = config.requireGateway()
+
                 PacketLoopForPlusDoh(
                     deviceIn = config.tunnelConfig.deviceIn,
                     deviceOut = config.tunnelConfig.deviceOut,
+
                     userBoringtunPrivateKey = config.requirePrivateKey(),
                     gatewayId = gw.public_key,
                     gatewayIp = gw.ipv4,
                     gatewayPort = gw.port,
+
                     createSocket = onCreateSocket,
                     stoppedUnexpectedly = this::stopUnexpectedly
                 )
             }
             config.usePlusMode -> {
+                // 高级模式，不使用 doh
                 val gw = config.requireGateway()
                 PacketLoopForPlus(
                     deviceIn = config.tunnelConfig.deviceIn,
                     deviceOut = config.tunnelConfig.deviceOut,
+
                     userBoringtunPrivateKey = config.requirePrivateKey(),
                     gatewayId = gw.public_key,
                     gatewayIp = gw.ipv4,
                     gatewayPort = gw.port,
+
                     createSocket = onCreateSocket,
                     stoppedUnexpectedly = this::stopUnexpectedly
                 )
             }
             else -> {
+                // 游客模式
                 PacketLoopForLibre(
                     deviceIn = config.tunnelConfig.deviceIn,
                     deviceOut = config.tunnelConfig.deviceOut,
@@ -190,15 +198,28 @@ object PacketLoopService {
 private class PacketLoopConfig(
     // 高级模式
     val usePlusMode: Boolean,
+
+    // dns
     val dns: Dns,
+
+    // 是否 使用 Doh
     val useDoh: Boolean,
+
+    // 从 VpnService 中 获取到的SystemTunnelConfig，其中包含了 FileDescriptor
     val tunnelConfig: SystemTunnelConfig,
+
+    // 私钥
     val privateKey: PrivateKey? = null,
+
+    // 网关
     val gateway: Gateway? = null,
+
+    // ???
     val useFiltering: Boolean = true
 ) {
 
     fun requirePrivateKey(): PrivateKey {
+        // 仅仅 高级模式 才有私钥
         return if (usePlusMode) privateKey!! else throw BlokadaException("Not Blocka configuration")
     }
 

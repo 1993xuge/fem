@@ -26,9 +26,13 @@ import com.squareup.moshi.JsonClass
 typealias AppId = String
 
 class App(
+    // 包名
     val id: AppId,
+    // 应用名称
     val name: String,
+    // 是否 跳过
     val isBypassed: Boolean,
+    // 是否是 系统 APP
     val isSystem: Boolean
 ) {
     override fun equals(other: Any?): Boolean {

@@ -45,7 +45,9 @@ data class Leases(val leases: List<Lease>)
 
 @JsonClass(generateAdapter = true)
 data class Account(
+    // 用户id
     val id: AccountId,
+    // 激活的到期时间
     val active_until: ActiveUntil = Date(0)
 ) {
     fun isActive() = active_until > Date()
@@ -57,13 +59,21 @@ data class Account(
 
 @JsonClass(generateAdapter = true)
 data class Gateway(
+    // GatewayId
     val public_key: PublicKey,
+
     val region: String,
+
     val location: String,
+
     val resource_usage_percent: Int,
+
     val ipv4: String,
+
     val ipv6: String,
+
     val port: Int,
+
     val tags: List<String>?
 ) {
     fun niceName() = location.split('-').map { it.capitalize() }.joinToString(" ")

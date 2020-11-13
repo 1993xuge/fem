@@ -32,11 +32,17 @@ import java.util.*
 class ActivationViewModel: ViewModel() {
 
     enum class ActivationState {
-        INACTIVE, PURCHASING, JUST_PURCHASED, JUST_ACTIVATED, ACTIVE, JUST_EXPIRED
+        INACTIVE,
+        PURCHASING,
+        JUST_PURCHASED,
+        JUST_ACTIVATED,
+        ACTIVE,
+        JUST_EXPIRED
     }
 
     private val log = Logger("Activation")
     private val persistence = PersistenceService
+
     private val expiration = ExpirationService
 
     private val _state = MutableLiveData<ActivationState>()
@@ -44,6 +50,7 @@ class ActivationViewModel: ViewModel() {
 
     init {
         viewModelScope.launch {
+            // 先 加载 ActivationState，默认是 INACTIVE
             _state.value = persistence.load(ActivationState::class)
         }
         expiration.onExpired = {
@@ -54,17 +61,22 @@ class ActivationViewModel: ViewModel() {
     fun setExpiration(activeUntil: ActiveUntil) {
         viewModelScope.launch {
             _state.value?.let { state ->
+
+                // 还未 过期
                 val active = !activeUntil.beforeNow()
                 when {
                     !active && state != ActivationState.INACTIVE -> {
                         log.w("Account just expired")
+                        // 过期了，但是 之前的状态 不是 INACTIVE，那么 需要将 状态迁移成 JUST_EXPIRED
                         updateLiveData(ActivationState.JUST_EXPIRED)
                     }
                     active && state == ActivationState.INACTIVE -> {
+                        // 未过期，但是 之前的状态时 INACTIVE，表明 刚刚激活
                         log.w("Account is active")
                         updateLiveData(ActivationState.ACTIVE)
                     }
                     active && state == ActivationState.PURCHASING -> {
+                        // 未过期，但是 直接的状态是  购买中，
                         log.w("Account is active after purchase flow, activation succeeded")
                         updateLiveData(ActivationState.JUST_ACTIVATED)
                     }
@@ -83,6 +95,7 @@ class ActivationViewModel: ViewModel() {
         }
     }
 
+    // 将 状态设置为 正在 购买
     fun setStartedPurchaseFlow() {
         viewModelScope.launch {
             log.w("User started purchase flow")
@@ -90,12 +103,14 @@ class ActivationViewModel: ViewModel() {
         }
     }
 
+    // 刷新账户信息，在 访问 url之后
     fun maybeRefreshAccountAfterUrlVisited(url: String) {
         viewModelScope.launch {
             _state.value?.let { state ->
                 // If we notice our payment gateway loaded the success url, we refresh account info
                 if (state == ActivationState.INACTIVE && url == SUCCESS_URL) {
                     log.w("Payment succeeded, marking account to refresh")
+                    // 状态是 未激活，但是 url是 Success，表明 刚刚 购买
                     updateLiveData(ActivationState.JUST_PURCHASED)
                 }
             }

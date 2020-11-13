@@ -32,6 +32,7 @@ object HttpService {
     private val engine = EngineService
     private val env = EnvironmentService
 
+    // 创建 OkHttp的 OkHttpClient 对象
     private val httpClient = OkHttpClient.Builder().apply {
         addNetworkInterceptor { chain ->
             val request = chain.request()
@@ -40,6 +41,7 @@ object HttpService {
             }
             chain.proceed(request)
         }
+
         addInterceptor { chain ->
             val request = chain.request().newBuilder().header("User-Agent", env.getUserAgent()).build()
             chain.proceed(request)

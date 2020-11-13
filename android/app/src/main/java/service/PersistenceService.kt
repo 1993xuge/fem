@@ -130,6 +130,7 @@ object PersistenceService {
         else -> throw BlokadaException("Unsupported type for persistence: $type")
     }
 
+    // 默认的数据
     private fun <T : Any> getDefault(type: KClass<T>) = when (type) {
         Stats::class -> Defaults.stats() as T
         Allowed::class -> Defaults.allowed() as T

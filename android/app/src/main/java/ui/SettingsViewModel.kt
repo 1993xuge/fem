@@ -47,14 +47,20 @@ class SettingsViewModel : ViewModel() {
 
     private val _localConfig = MutableLiveData<LocalConfig>()
     val localConfig = _localConfig.distinctUntilChanged()
+
     val selectedDns = localConfig.map { it.dnsChoice }
 
     private val _syncableConfig = MutableLiveData<SyncableConfig>()
     val syncableConfig = _syncableConfig
 
     init {
+        // 本地的配置
         _localConfig.value = persistence.load(LocalConfig::class)
+
+        // ???
         _syncableConfig.value = persistence.load(SyncableConfig::class)
+
+        //
         _dnsEntries.value = persistence.load(DnsWrapper::class)
         log.v("Config: ${_localConfig.value}")
     }
@@ -62,14 +68,20 @@ class SettingsViewModel : ViewModel() {
     fun setSelectedDns(id: DnsId) {
         _localConfig.value?.let { current ->
             if (id != current.dnsChoice) {
+                // 新的id  不等于 当前已经存储的id
                 viewModelScope.launch {
                     try {
                         log.v("Changing selected DNS: $id")
+                        // 根据 dnsId 从 dns列表中查找
                         val dns = _dnsEntries.value?.value?.first { it.id == id }
                             ?: throw BlokadaException("Unknown DNS")
-                        val new = current.copy(dnsChoice = id)
+
+                        // 更新 engin中的dns
                         engine.changeDns(dns, dnsForPlusMode = decideDnsForPlusMode(dns))
+
+                        val new = current.copy(dnsChoice = id)
                         persistence.save(new)
+
                         _localConfig.value = new
                     } catch (ex: Exception) {
                         log.e("Could not change dns to $id".cause(ex))
@@ -107,6 +119,7 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
+    // 给 SyncableConfig 设置 不是 第一次 运行
     fun setFirstTimeSeen() {
         log.v("Marking first time as seen")
         _syncableConfig.value?.let { current ->
@@ -118,6 +131,7 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
+    // 设置 已经 给应用 评过分了？？？
     fun setRatedApp() {
         log.v("Marking app as rated")
         _syncableConfig.value?.let { current ->
@@ -129,6 +143,7 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
+    //
     fun getCurrentDns(): Dns {
         val current = _dnsEntries.value?.let { entries ->
             _localConfig.value?.let { localConfig ->
@@ -148,9 +163,14 @@ class SettingsViewModel : ViewModel() {
         return current ?: throw BlokadaException("Accessed getCurrentDns() before loaded")
     }
 
+    // 这个方法是用来 判断，是 使用 参数中的dns 还是 BlockaDns
     fun decideDnsForPlusMode(dns: Dns? = null, useBlockaDnsInPlusMode: Boolean? = null): Dns {
         val d = dns ?: getCurrentDns()
+
+        // 是否 使用 useBlockaDns ，默认是true
         val u = useBlockaDnsInPlusMode ?: _localConfig.value?.useBlockaDnsInPlusMode ?: true
+
+        //
         return if (u) DnsDataSource.blocka else d
     }
 

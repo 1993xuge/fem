@@ -42,12 +42,14 @@ object AppRepository {
     private val persistence = PersistenceService
     private val scope = GlobalScope
 
+    // 从本地 加载 用户设置的 应用白名单
     private var bypassedAppIds = persistence.load(BypassedAppIds::class).ids
         set(value) {
             persistence.save(BypassedAppIds(value))
             field = value
         }
 
+    // 总是 需要 跳过的 包名
     private val alwaysBypassed by lazy {
         listOf<AppId>(
             // This app package name
@@ -55,6 +57,7 @@ object AppRepository {
         )
     }
 
+    // 假的 vpn ，需要 跳过的 包名
     private val bypassedForFakeVpn = listOf(
         "com.android.vending",
         "com.android.providers.downloads",
@@ -92,11 +95,22 @@ object AppRepository {
         "com.android.carrierconfig"
     )
 
+    /**
+     * 获取 需要 跳过的 应用列表
+     */
     fun getPackageNamesOfAppsToBypass(forRealTunnel: Boolean = false): List<AppId> {
-        return if (forRealTunnel) alwaysBypassed + bypassedAppIds
-        else alwaysBypassed + bypassedForFakeVpn + bypassedAppIds
+        return if (forRealTunnel) {
+            // 真的vpn
+            alwaysBypassed + bypassedAppIds
+        } else {
+            // 假的 vpn
+            alwaysBypassed + bypassedForFakeVpn + bypassedAppIds
+        }
     }
 
+    /**
+     * 获取 所有安装的应用列表
+     */
     suspend fun getApps(): List<App> {
         return scope.async(Dispatchers.Default) {
             log.v("Fetching apps")
@@ -133,8 +147,11 @@ object AppRepository {
     }
 
     fun switchBypassForApp(id: AppId) {
-        if (isAppBypassed(id)) bypassedAppIds -= id
-        else bypassedAppIds += id
+        if (isAppBypassed(id)) {
+            bypassedAppIds = bypassedAppIds - id
+        } else {
+            bypassedAppIds = bypassedAppIds + id
+        }
     }
 
     fun getAppIcon(id: AppId): Drawable? {

@@ -29,27 +29,36 @@ import engine.Host
 import kotlinx.coroutines.launch
 import java.util.*
 
+/**
+ * 用来统计本次 运行中，允许和拒绝的 广告信息
+ */
 object StatsService {
 
     private var runtimeAllowed = 0
     private var runtimeDenied = 0
+
+    // InternalKey = host + HistoryEntryType
     private val internalStats: MutableMap<InternalKey, InternalEntry> = mutableMapOf()
 
+    // pass 用户允许的host
     suspend fun passedAllowed(host: Host) {
         increment(host, HistoryEntryType.passed_allowed)
         runtimeAllowed += 1
     }
 
+    // block 用户 拒绝的 host
     suspend fun blockedDenied(host: Host) {
         increment(host, HistoryEntryType.blocked_denied)
         runtimeDenied += 1
     }
 
+    // 默认的 block 列表中
     suspend fun blocked(host: Host) {
         increment(host, HistoryEntryType.blocked)
         runtimeDenied += 1
     }
 
+    //
     suspend fun passed(host: Host) {
         increment(host, HistoryEntryType.passed)
         runtimeAllowed += 1

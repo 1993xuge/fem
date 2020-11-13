@@ -37,20 +37,29 @@ import utils.Logger
 import java.net.DatagramSocket
 import java.net.Socket
 
+/**
+ * 直接 操作 系统 VPNService的类
+ */
 object SystemTunnelService {
 
     private val log = Logger("SystemTunnel")
     private val context = ContextService
 
+    // 绑定Vpn Service时的 ServiceConnection对象，从其中可以 获取到 Vpn Service 对象的索引
     private var connection: SystemTunnelConnection? = null
         @Synchronized get
         @Synchronized set
 
+    // 当 配置 Vpn时的callback，从 EngineService 透传到 Vpn Service中
     var onConfigureTunnel: (vpn: VpnService.Builder) -> Unit = {}
+
+    // vpn关闭时的callback，当 Vpn Service 销毁时，回调
     var onTunnelClosed = { ex: BlokadaException? -> }
 
+    // 真正的Vpn Service对象
     private var tunnel: SystemTunnel? = null
 
+    // 启动 Vpn，直接 start vpn代理 Service
     fun setup() {
         log.v("Starting SystemTunnel service")
         val ctx = context.requireAppContext()
@@ -58,17 +67,23 @@ object SystemTunnelService {
         ctx.startService(intent)
     }
 
+    // 绑定 Vpn Service，并从中 获取 SystemTunnelConfig 对象，
+    // 如果 SystemTunnelConfig 对象 不为空，则表明，已经 打开了 Vpn连接
     suspend fun getStatus(): TunnelStatus {
         return try {
             val hasFileDescriptor = getConnection().binder.tunnel.queryConfig() != null
-            if (hasFileDescriptor) TunnelStatus.filteringOnly()
-            else TunnelStatus.off()
+            if (hasFileDescriptor) {
+                TunnelStatus.filteringOnly()
+            } else {
+                TunnelStatus.off()
+            }
         } catch (ex: Exception) {
             log.e("Could not get tunnel status".cause(ex))
             TunnelStatus.error(BlokadaException(ex.message ?: "Unknown reason"))
         }
     }
 
+    // 操作 Vpn Service，打开 Vpn连接
     suspend fun open(): SystemTunnelConfig {
         log.v("Received a request to open tunnel")
         try {
@@ -80,11 +95,13 @@ object SystemTunnelService {
         }
     }
 
+    // 操作 Vpn Service 关闭 Vpn 连接
     suspend fun close() {
         log.v("Received a request to close tunnel")
         getConnection().binder.tunnel.turnOff()
     }
 
+    // 获取 SystemTunnelConfig，实际上 是为了 获取 打开 Vpn连接时的 FileDescriptor
     suspend fun getTunnelConfig(): SystemTunnelConfig {
         return getConnection().binder.tunnel.queryConfig()
             ?: throw BlokadaException("No system tunnel started")
@@ -100,6 +117,7 @@ object SystemTunnelService {
         tunnel?.protect(socket) ?: log.e("No tunnel reference while called protectSocket()")
     }
 
+    // 绑定 VPNService，并获取 SystemTunnelConnection
     private suspend fun getConnection(): SystemTunnelConnection {
         return connection ?: run {
             val deferred = CompletableDeferred<SystemTunnelBinder>()
@@ -165,10 +183,21 @@ object SystemTunnelService {
 
 }
 
+/**
+ * 绑定 Service时需要的 ServiceConnection
+ */
 private class SystemTunnelConnection(
+
+    // 用以  等待 Service 绑定完成
     private val deferred: ConnectDeferred,
+
+    // 用以 传递 配置 Vpn时的callback
     var onConfigureTunnel: (vpn: VpnService.Builder) -> Unit,
+
+    // Vpn断开时的 callback
     var onTunnelClosed: (exception: BlokadaException?) -> Unit,
+
+    // Service 绑定断开的 callback
     val onConnectionClosed: () -> Unit
 ) : ServiceConnection {
 

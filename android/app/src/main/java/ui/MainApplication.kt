@@ -56,10 +56,15 @@ class MainApplication: LocalizationApplication(), ViewModelStoreOwner {
     override fun getViewModelStore() = MainApplication.viewModelStore
 
     private lateinit var accountVM: AccountViewModel
+
     private lateinit var tunnelVM: TunnelViewModel
+
     private lateinit var settingsVM: SettingsViewModel
+
     private lateinit var blockaRepoVM: BlockaRepoViewModel
+
     private lateinit var statsVM: StatsViewModel
+
     private lateinit var adsCounterVM: AdsCounterViewModel
 
     override fun onCreate() {
@@ -81,16 +86,23 @@ class MainApplication: LocalizationApplication(), ViewModelStoreOwner {
         adsCounterVM = ViewModelProvider(this).get(AdsCounterViewModel::class.java)
 
         accountVM.account.observeForever { account ->
+            // 监听 账户信息 变化
             tunnelVM.checkConfigAfterAccountChanged(account)
         }
 
         settingsVM.localConfig.observeForever {
+            // 本地 LocalConfig 信息 发生变化
+
+            // 躲避版本
             EnvironmentService.escaped = it.escaped
+
             TranslationService.setLocale(it.locale)
+
             tunnelVM.refreshStatus()
         }
 
         blockaRepoVM.repoConfig.observeForever {
+            // BlockaRepoConfig  信息发生变化
             maybePerformAction(it)
             UpdateService.checkForUpdate(it)
             if (ContextService.hasActivityContext())
@@ -114,7 +126,9 @@ class MainApplication: LocalizationApplication(), ViewModelStoreOwner {
             MonitorService.setTunnelStatus(it)
         }
 
+        // 初始化 EngineService
         EngineService.setup()
+        // 配置 DNS
         EngineService.setDns(
             settingsVM.getCurrentDns(),
             dnsForPlusMode = settingsVM.decideDnsForPlusMode()

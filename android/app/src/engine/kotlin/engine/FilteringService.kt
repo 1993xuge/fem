@@ -61,25 +61,43 @@ internal object FilteringService {
         log.v("Reloaded: ${merged.size} hosts, + user: ${userDenied.size} denied, ${userAllowed.size} allowed")
     }
 
+    // 允许 Host
     fun allowed(host: Host): Boolean {
         return if (userAllowed.contains(host)) {
-            scope.launch(Dispatchers.Main) { stats.passedAllowed(host) }
+            // 只有 该 host 在 用户允许的列表中，才能 pass
+            scope.launch(Dispatchers.Main) {
+                stats.passedAllowed(host)
+            }
             true
-        } else false
+        } else {
+            false
+        }
     }
 
     fun denied(host: Host): Boolean {
-        return if (userDenied.contains(host)) {
-            // 用户主动拒绝
-            scope.launch(Dispatchers.Main) { stats.blockedDenied(host) }
-            true
-        } else if (merged.contains(host)) {
-            // 可以拒绝
-            scope.launch(Dispatchers.Main) { stats.blocked(host) }
-            true
-        } else {
-            scope.launch(Dispatchers.Main) { stats.passed(host) }
-            false
+        return when {
+            userDenied.contains(host) -> {
+                // 用户主动拒绝
+                scope.launch(Dispatchers.Main) {
+                    stats.blockedDenied(host)
+                }
+                true
+            }
+
+            merged.contains(host) -> {
+                // 可以拒绝
+                scope.launch(Dispatchers.Main) {
+                    stats.blocked(host)
+                }
+                true
+            }
+            else -> {
+                // 不在 用户主动禁止的列表中，也不在 默认的block列表中，那么 直接 pass。
+                scope.launch(Dispatchers.Main) {
+                    stats.passed(host)
+                }
+                false
+            }
         }
     }
 

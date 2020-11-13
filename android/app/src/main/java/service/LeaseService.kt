@@ -32,8 +32,11 @@ object LeaseService {
     private val blocka = BlockaRepository
     private val env = EnvironmentService
 
+    // 通过 服务端 接口 创建 lease 信息
     suspend fun createLease(config: BlockaConfig, gateway: Gateway): Lease {
         log.w("Creating lease")
+
+        // 创建 lease请求
         val request = LeaseRequest(
             account_id = config.getAccountId(),
             public_key = config.publicKey,
@@ -42,6 +45,7 @@ object LeaseService {
         )
 
         try {
+            // 调用 服务端接口 创建 Lease 信息
             return blocka.createLease(request)
         } catch (ex: TooManyDevices) {
             log.w("Too many devices, attempting to remove one lease")
@@ -50,22 +54,30 @@ object LeaseService {
         }
     }
 
+    // 根据 账户id 从服务端 获取 lease信息
     suspend fun fetchLeases(accountId: AccountId): List<Lease> {
         return blocka.fetchLeases(accountId)
     }
 
+    // 从服务端你 删除 lease信息
     suspend fun deleteLease(lease: Lease) {
         log.w("Deleting lease")
         return blocka.deleteLease(lease.account_id, lease)
     }
 
     suspend fun checkLease(config: BlockaConfig) {
-        if (config.vpnEnabled) config.lease?.let { lease ->
+        if (!config.vpnEnabled) {
+            return
+        }
+
+        config.lease?.let { lease ->
             log.v("Checking lease")
             config.gateway?.let { gateway ->
                 try {
+                    // 从服务端 获取 当前的 Lease
                     val currentLease = getCurrentLease(config, gateway)
                     if (!currentLease.isActive()) {
+                        // Lease 过期了，从服务端 获取 新的
                         log.w("Lease expired, refreshing")
                         blocka.createLease(
                             LeaseRequest(
@@ -84,14 +96,20 @@ object LeaseService {
         }
     }
 
+    // 从服务端 获取当前的 Lease 信息
     private suspend fun getCurrentLease(config: BlockaConfig, gateway: Gateway): Lease {
         val leases = blocka.fetchLeases(config.getAccountId())
+
         if (leases.isEmpty()) throw BlokadaException("No leases found for this account")
-        val current = leases.firstOrNull { it.public_key == config.publicKey && it.gateway_id == gateway.public_key }
+
+        val current =
+            leases.firstOrNull { it.public_key == config.publicKey && it.gateway_id == gateway.public_key }
+
         return current ?: throw BlokadaException("No lease found for this device")
     }
 
     // This is used to automatically clear the max devices limit, in some scenarios
+    // 当绑定 太多设备时，会删除 当前账户的lease
     private suspend fun deleteLeaseWithAliasOfCurrentDevice(config: BlockaConfig) {
         log.v("Deleting lease with alias of current device")
         val leases = blocka.fetchLeases(config.getAccountId())

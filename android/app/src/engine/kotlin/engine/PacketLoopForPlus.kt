@@ -39,7 +39,7 @@ import java.net.InetAddress
 import java.nio.ByteBuffer
 
 
-internal class PacketLoopForPlus (
+internal class PacketLoopForPlus(
     private val deviceIn: FileInputStream,
     private val deviceOut: FileOutputStream,
     private val userBoringtunPrivateKey: String,
@@ -48,7 +48,7 @@ internal class PacketLoopForPlus (
     private val gatewayPort: Int,
     private val createSocket: () -> DatagramSocket,
     private val stoppedUnexpectedly: () -> Unit
-): Thread("PacketLoopForPlus") {
+) : Thread("PacketLoopForPlus") {
 
     private val log = Logger("PLPlus")
     private val metrics = MetricsService
@@ -75,7 +75,7 @@ internal class PacketLoopForPlus (
     private val rewriter = PacketRewriter(this::loopback, buffer)
 
     private fun createTunnel() {
-        log.v("Creating boringtun tunnel for gateway: $gatewayId")
+        log.v("Creating boringtun tunnel for gateway: $gatewayId   privateKey = $userBoringtunPrivateKey")
         boringtunHandle = BoringTunJNI.new_tunnel(userBoringtunPrivateKey, gatewayId)
     }
 
@@ -87,6 +87,7 @@ internal class PacketLoopForPlus (
             val device = setupDevicePipe(deviceIn)
 
             createTunnel()
+
             openGatewaySocket()
 
             val polls = setupPolls(errors, device)
@@ -121,8 +122,10 @@ internal class PacketLoopForPlus (
         val destination = buffer
         destination.rewind()
         destination.limit(destination.capacity())
-        val response = BoringTunJNI.wireguard_write(boringtunHandle, fromDevice, length, destination,
-            destination.capacity(), op)
+        val response = BoringTunJNI.wireguard_write(
+            boringtunHandle, fromDevice, length, destination,
+            destination.capacity(), op
+        )
         destination.limit(response)
         val opCode = op[0].toInt()
         when (opCode) {
@@ -213,8 +216,14 @@ internal class PacketLoopForPlus (
 
     private fun closeGatewaySocket() {
         log.w("Closing gateway socket")
-        try { gatewayParcelFileDescriptor?.close() }  catch (ex: Exception) {}
-        try { gatewaySocket?.close() } catch (ex: Exception) {}
+        try {
+            gatewayParcelFileDescriptor?.close()
+        } catch (ex: Exception) {
+        }
+        try {
+            gatewaySocket?.close()
+        } catch (ex: Exception) {
+        }
         gatewayParcelFileDescriptor = null
         gatewaySocket = null
     }
@@ -223,8 +232,12 @@ internal class PacketLoopForPlus (
         val pipe = Os.pipe()
         errorPipe = pipe[0]
         val errors = StructPollfd()
+
+        // 需要轮询的文件描述符
         errors.fd = errorPipe
+        // 该 StructPollfd 感兴趣的事件
         errors.listenFor(OsConstants.POLLHUP or OsConstants.POLLERR)
+
         errors
     }()
 
@@ -305,7 +318,8 @@ internal class PacketLoopForPlus (
         val destination = buffer
         destination.rewind()
         destination.limit(destination.capacity())
-        val response = BoringTunJNI.wireguard_tick(boringtunHandle, destination, destination.capacity(), op)
+        val response =
+            BoringTunJNI.wireguard_tick(boringtunHandle, destination, destination.capacity(), op)
         destination.limit(response)
         val opCode = op[0].toInt()
         when (opCode) {
@@ -328,7 +342,10 @@ internal class PacketLoopForPlus (
     private fun cleanup() {
         log.v("Cleaning up resources: $this")
         closeGatewaySocket()
-        try { Os.close(errorPipe) } catch (ex: Exception) {}
+        try {
+            Os.close(errorPipe)
+        } catch (ex: Exception) {
+        }
         errorPipe = null
 
         // This is managed by the SystemTunnel

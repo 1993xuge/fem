@@ -25,24 +25,32 @@ import model.Packs
 import model.Defaults
 import utils.Logger
 
+/**
+ * 包 转移？？？
+ */
 object PackMigration {
 
     fun migrate(packs: Packs): Pair<Packs, Boolean> {
+
         return if (packs.version ?: 0 < Defaults.PACKS_VERSION) {
             Logger.w("Pack", "Migrating packs from ${packs.version} to ${Defaults.PACKS_VERSION}")
-            Packs(
-                packs = Defaults.packs().packs.map { fresh ->
-                    packs.packs.firstOrNull { persisted -> persisted.id == fresh.id }?.let { persisted ->
-                        // Preserve PackStatus but adjust the selected configs to what actually exists now
-                        fresh.copy(
-                            status = persisted.status.copy(
-                                config = persisted.status.config.intersect(fresh.configs).toList()
-                            )
+
+            val packList = Defaults.packs().packs.map { fresh ->
+
+                // 从 packs 中 获取 Pack
+                val pack = packs.packs.firstOrNull { persisted -> persisted.id == fresh.id }
+
+                pack?.let { persisted ->
+                    // Preserve PackStatus but adjust the selected configs to what actually exists now
+                    fresh.copy(
+                        status = persisted.status.copy(
+                            config = persisted.status.config.intersect(fresh.configs).toList()
                         )
-                    } ?: fresh
-                },
-                version = Defaults.PACKS_VERSION
-            ) to true
+                    )
+                } ?: fresh
+            }
+
+            Packs(packs = packList, version = Defaults.PACKS_VERSION) to true
         } else packs to false
     }
 }

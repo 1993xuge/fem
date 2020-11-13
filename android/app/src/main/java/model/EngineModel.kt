@@ -26,7 +26,7 @@ class TunnelStatus private constructor(
     val active: Boolean,
     // 正在打开
     val inProgress: Boolean,
-    // ???
+    // 是否使用 uoh
     val isUsingDnsOverHttps: Boolean,
     // ???
     val gatewayId: GatewayId?,

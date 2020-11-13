@@ -110,15 +110,19 @@ object BlockaDataSource {
 
 interface BlockaRestApi {
 
+    // 根据 用户id 从 服务端 获取 Account
     @GET("/v1/account")
     fun getAccountInfo(@Query("account_id") accountId: String): Call<AccountWrapper>
 
+    // 新建 Account
     @POST("/v1/account")
     fun newAccount(): Call<AccountWrapper>
 
+    // 从服务端 获取 网关列表
     @GET("/v2/gateway")
     fun getGateways(): Call<Gateways>
 
+    // 根据 用户id 从服务端 获取 lease
     @GET("/v1/lease")
     fun getLeases(@Query("account_id") accountId: String): Call<Leases>
 

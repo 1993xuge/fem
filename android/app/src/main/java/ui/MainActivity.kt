@@ -161,22 +161,31 @@ class MainActivity : LocalizationActivity(), PreferenceFragmentCompat.OnPreferen
         activationVM.state.observe(this, Observer { state ->
             when (state) {
                 ActivationViewModel.ActivationState.JUST_PURCHASED -> {
+                    // 刚刚 购买完成，刷新 账户信息
                     accountVM.refreshAccount()
                     val nav = findNavController(R.id.nav_host_fragment)
                     nav.navigateUp()
                 }
                 ActivationViewModel.ActivationState.JUST_ACTIVATED -> {
+                    // 账户 激活了
                     val fragment = ActivatedFragment.newInstance()
                     fragment.show(supportFragmentManager, null)
                 }
                 ActivationViewModel.ActivationState.JUST_EXPIRED -> {
+                    // 刚刚 过期时，需要刷新账户信息
                     AlertDialogService.showAlert(getString(R.string.error_vpn_expired),
                         title = getString(R.string.alert_vpn_expired_header),
                         onDismiss = {
+                            // 当 关闭 dialog后，
                             lifecycleScope.launch {
+                                // 将状态设置为 过期
                                 activationVM.setInformedUserAboutExpiration()
+                                // 将 过期的 通知 取消
                                 NotificationService.cancel(ExpiredNotification())
+                                // 清楚 lease
                                 tunnelVM.clearLease()
+
+                                // 刷新账户
                                 accountVM.refreshAccount()
                             }
                         })
@@ -190,8 +199,10 @@ class MainActivity : LocalizationActivity(), PreferenceFragmentCompat.OnPreferen
 
         tunnelVM.tunnelStatus.observe(this, Observer { status ->
             if (status.active) {
+                // 监听 vpn的 连接状态发生变化。如果 是 激活状态，判断是否是 首次打开
                 val firstTime = !(settingsVM.syncableConfig.value?.notFirstRun ?: true)
                 if (firstTime) {
+                    // 首次 打开，需要弹出 FirstTimeFragment
                     settingsVM.setFirstTimeSeen()
                     val fragment = FirstTimeFragment.newInstance()
                     fragment.show(supportFragmentManager, null)
@@ -231,6 +242,7 @@ class MainActivity : LocalizationActivity(), PreferenceFragmentCompat.OnPreferen
         tunnelVM.refreshStatus()
         accountVM.checkAccount()
         blockaRepoVM.maybeRefreshRepo()
+
         lifecycleScope.launch {
             statsVM.refresh()
         }

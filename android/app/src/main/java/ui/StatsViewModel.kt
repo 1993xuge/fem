@@ -34,41 +34,66 @@ import java.lang.Exception
 class StatsViewModel : ViewModel() {
 
     enum class Sorting {
-        RECENT, TOP
+
+        // 按照 时间排序
+        RECENT,
+
+        // 按照 数量进行排序
+        TOP
     }
 
     enum class Filter {
-        ALL, BLOCKED, ALLOWED
+        // 所有的 历史信息
+        ALL,
+
+        // 被拦截的 历史信息
+        BLOCKED,
+
+        // 被允许的 历史信息
+        ALLOWED
     }
 
     private val log = Logger("Stats")
     private val persistence = PersistenceService
+
     private val engine = EngineService
+
     private val statistics = StatsService
 
     private var sorting = Sorting.RECENT
+
     private var filter = Filter.ALL
+
     private var searchTerm: String? = null
 
+    // 所有的统计信息
     private val _stats = MutableLiveData<Stats>()
     val stats: LiveData<Stats> = _stats.distinctUntilChanged()
+
+    // HistoryEntry 列表
     val history = _stats.map {
         applyFilters(it.entries)
     }
 
+    // 被允许的列表
     private val _allowed = MutableLiveData<Allowed>()
     private val allowed = _allowed.map { it.value }
 
+    // 被拒绝的列表
     private val _denied = MutableLiveData<Denied>()
     private val denied = _denied.map { it.value }
 
     init {
         viewModelScope.launch {
+            // 加载 被允许的列表
             _allowed.value = persistence.load(Allowed::class)
+
+            // 加载被拒绝的列表
             _denied.value = persistence.load(Denied::class)
         }
     }
 
+    // 刷新统计数据，即从 StatsService 中获取 统计信息，并将其保存到 当前的ViewModel中
     fun refresh() {
         viewModelScope.launch {
             try {
@@ -79,6 +104,7 @@ class StatsViewModel : ViewModel() {
         }
     }
 
+    // 根据 name 从 history中获取 历史记录。name 即 Host
     fun get(forName: String): HistoryEntry? {
         return history.value?.firstOrNull { it.name == forName }
     }
@@ -107,7 +133,9 @@ class StatsViewModel : ViewModel() {
                 try {
                     val new = current.allow(name)
                     persistence.save(new)
+
                     engine.reloadBlockLists()
+
                     _allowed.value = new
                     updateLiveData()
                 } catch (ex: Exception) {

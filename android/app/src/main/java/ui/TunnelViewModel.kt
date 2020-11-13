@@ -43,8 +43,13 @@ class TunnelViewModel : ViewModel() {
 
     private val log = Logger("TunnelViewModel")
     private val persistence = PersistenceService
+
+    // 实际的 引擎 服务
     private val engine = EngineService
+
+    // Vpn权限申请
     private val vpnPerm = VpnPermissionService
+
     private val lease = LeaseService
 
     private val _config = MutableLiveData<BlockaConfig>()
@@ -72,6 +77,7 @@ class TunnelViewModel : ViewModel() {
         }
     }
 
+    // 从 engine 中获取最新的状态，如果 开启了vpn，则还需要 check lease
     fun refreshStatus() {
         log.v("refreshStatus")
         viewModelScope.launch {
@@ -260,14 +266,17 @@ class TunnelViewModel : ViewModel() {
         }
     }
 
+    // 当账户信息 发生变化时，调用该方法
     fun checkConfigAfterAccountChanged(account: Account) {
         log.v("checkConfigAfterAccountChanged")
         viewModelScope.launch {
             _config.value?.let {
                 if (account.id != it.keysGeneratedForAccountId) {
+                    // 最新的 账户信息中 account Id 与 本地的 account id 不一致。
                     log.w("Account ID changed")
                     newKeypair(account.id)
                 } else if (it.keysGeneratedForDevice != EnvironmentService.getDeviceId()) {
+                    // 设备不一致
                     log.w("Device ID changed")
                     newKeypair(account.id)
                 }
@@ -345,6 +354,7 @@ class TunnelViewModel : ViewModel() {
         }
     }
 
+    // 创建 针对 该 用户id的 公钥和私钥，并更新 到 BlockaConfig中。
     private suspend fun newKeypair(accountId: AccountId) {
         log.v("newKeypair: accountId = $accountId")
         _config.value?.let {

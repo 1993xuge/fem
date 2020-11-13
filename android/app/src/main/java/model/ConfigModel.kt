@@ -26,19 +26,34 @@ import service.EnvironmentService
 
 @JsonClass(generateAdapter = true)
 data class BlockaConfig(
+    // 私钥， 通过 JNI 代码生成
     val privateKey: PrivateKey,
+    // 公钥，通过 JNI 代码生成
     val publicKey: PublicKey,
+
+    // 当前账户id
     val keysGeneratedForAccountId: AccountId,
+
+    // 设备id，所谓的设备id是 设备的品牌+型号
     val keysGeneratedForDevice: DeviceId,
+
+    // 当前账户的Lease，从服务端 获取，可以没有
     val lease: Lease?,
+
+    // 网关？？？ 从哪里 获取的？？？
     val gateway: Gateway?,
+
+    // 是否 开启 vpn
     val vpnEnabled: Boolean,
+
+    // 之前 tunnel 是否 打开了
     val tunnelEnabled: Boolean = false
 ) {
     fun getAccountId() = keysGeneratedForAccountId
 }
 
 // These settings are never backed up to the cloud
+// 本地设置？
 @JsonClass(generateAdapter = true)
 data class LocalConfig(
     val dnsChoice: DnsId,

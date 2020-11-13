@@ -41,6 +41,7 @@ class SystemTunnel : VpnService() {
 
     private val log = Logger("SystemTunnel")
 
+    // 绑定 Service时 onBind 方法返回的Binder
     private var binder: SystemTunnelBinder? = null
         @Synchronized get
         @Synchronized set
@@ -62,6 +63,7 @@ class SystemTunnel : VpnService() {
             // System calls us twice in a row on boot
             reactedToStart = true
 
+            // 开启 系统 Vpn Service时，顺便 打开 tunnel
             // This might be a misuse
             val tunnelVM = ViewModelProvider(app()).get(TunnelViewModel::class.java)
             tunnelVM.turnOnWhenStartedBySystem()
@@ -73,6 +75,8 @@ class SystemTunnel : VpnService() {
     override fun onBind(intent: Intent?): IBinder? {
         if (SYSTEM_TUNNEL_BINDER_ACTION == intent?.action) {
             log.v("onBind received: $this")
+
+            // Service 绑定成功，返回 SystemTunnelBinder对象
             binder = SystemTunnelBinder(this)
             return binder
         }
@@ -103,11 +107,12 @@ class SystemTunnel : VpnService() {
 
     fun queryConfig() = config
 
+    // 打开 Vpn连接
     fun turnOn(): SystemTunnelConfig {
 
         log.v("Tunnel turnOn() called")
         val tunnelBuilder = super.Builder()
-        // 配置 VPN
+        // 开启 vpn连接前，配置 VPN
         binder { it.onConfigureTunnel(tunnelBuilder) }
 
         log.v("Asking system for tunnel")
@@ -142,15 +147,23 @@ class SystemTunnel : VpnService() {
 
 }
 
+// 当 vpn 连接成功后，生成的相关信息
 class SystemTunnelConfig(
     val fd: ParcelFileDescriptor,
     val deviceIn: FileInputStream,
     val deviceOut: FileOutputStream
 )
 
+// Vpn Service 的 Binder对象，在 绑定Service时使用
+// 当 Service 绑定成功后，onBind方法 返回的 对象
 class SystemTunnelBinder(
+    // 返回 Vpn Service 对象
     val tunnel: SystemTunnel,
+
+    // Vpn Service 销毁时的 callback
     var onTunnelClosed: (exception: BlokadaException?) -> Unit = {},
+
+    // 开启Vpn连接前， 配置 vpn 的 callback
     var onConfigureTunnel: (vpn: VpnService.Builder) -> Unit = {}
 ) : Binder()
 

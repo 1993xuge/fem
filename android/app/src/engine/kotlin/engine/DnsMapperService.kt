@@ -30,17 +30,25 @@ import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.InetAddress
 
+/**
+ * Dns地址的包装
+ *
+ * 如果 使用 doh，则使用 代理的dns，否则 使用 传入的dns
+ */
 object DnsMapperService {
 
     private val log = Logger("DnsMapper")
+
     private var servers = emptyList<InetAddress>()
+
     private var useProxyDns = false
 
     fun setDns(dns: Dns, doh: Boolean) {
         log.v("setDns: Using DNS configuration (DoH: $doh): $dns")
+
         servers = dns.ips.ipv4().map { Inet4Address.getByName(it) }
 
-        servers.forEach { log.v("setDns: service = $it") }
+        servers.forEach { log.v("setDns: service = ${it.toString()}") }
 
         useProxyDns = false
 
@@ -88,6 +96,7 @@ object DnsMapperService {
         return if (useProxyDns) proxyDnsPort else UdpPort.DOMAIN
     }
 
+    // 代理 DNS的 地址
     val proxyDnsIpBytes = byteArrayOf(127, 0, 0, 1)
     val proxyDnsIp = Inet4Address.getByAddress(proxyDnsIpBytes)
     val proxyDnsPort = UdpPort(BlockaDnsService.PROXY_PORT, "blocka-doh-proxy")

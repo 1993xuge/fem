@@ -61,7 +61,9 @@ class HomeFragment : Fragment() {
     ): View? {
         activity?.let {
             vm = ViewModelProvider(it.app()).get(TunnelViewModel::class.java)
+
             accountVM = ViewModelProvider(it.app()).get(AccountViewModel::class.java)
+
             adsCounterVm = ViewModelProvider(it.app()).get(AdsCounterViewModel::class.java)
         }
 

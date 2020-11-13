@@ -57,6 +57,8 @@ object EngineService {
 
     fun setup() {
         log.v("setup")
+
+        // 加载 JNI 库
         JniService.setup()
 
         packetLoopService.onCreateSocket = {
@@ -111,6 +113,7 @@ object EngineService {
         systemTunnelService.unbind()
     }
 
+    // 通过 JNI 方法生成 PrivateKey 和 PublicKey
     suspend fun newKeypair(): Pair<PrivateKey, PublicKey> {
         val secret = BoringTunJNI.x25519_secret_key()
         log.w("newKeypair: secret = $secret")
@@ -123,6 +126,7 @@ object EngineService {
         return secretString to publicString
     }
 
+    // 根据 应用的配置， 打开 Vpn 连接
     suspend fun startTunnel(lease: Lease?) {
 
         log.w("startTunnel: lease = $lease  isSlim = ${EnvironmentService.isSlim()}}")
@@ -140,6 +144,8 @@ object EngineService {
                 // 系统配置 vpn时的回调
                 systemTunnelService.onConfigureTunnel = { tun ->
                     val ipv6 = PersistenceService.load(LocalConfig::class).ipv6
+
+                    // 游客模式
                     systemTunnelConfigurator.forLibre(tun, dns, ipv6)
                 }
 
@@ -164,12 +170,17 @@ object EngineService {
                 val tunnelConfig = systemTunnelService.open()
                 packetLoopService.startLibreMode(useDoh, dns, tunnelConfig)
                 status = TunnelStatus.filteringOnly(useDoh)
+
+                // 非plus模式下，貌似一直处于 filteringOnly 下
             }
             // Plus mode
             else -> {
                 val useDoh = useDoh(dnsForPlusMode)
+
                 dnsMapperService.setDns(dnsForPlusMode, useDoh)
+
                 if (useDoh) blockaDnsService.startDnsProxy(dnsForPlusMode)
+
                 systemTunnelService.onConfigureTunnel = { tun ->
                     val ipv6 = PersistenceService.load(LocalConfig::class).ipv6
                     systemTunnelConfigurator.forPlus(tun, ipv6, dnsForPlusMode, lease = lease)
@@ -180,35 +191,61 @@ object EngineService {
         }
     }
 
+    // 关闭 Tunnel
     suspend fun stopTunnel() {
         log.w("stopTunnel")
+        // 将状态设置为 progress
         status = TunnelStatus.inProgress()
+
+        // 停止 dns 代理.doh中使用
         blockaDnsService.stopDnsProxy()
+
+        // 停止 数据包 循环的服务
         packetLoopService.stop()
+
+        // 关闭 vpn Service
         systemTunnelService.close()
+
+        // 将状态 设置为 off
         status = TunnelStatus.off()
     }
 
+    // 只有在 plus模式下 才存在 connectVpn
     suspend fun connectVpn(config: BlockaConfig) {
         log.w("connectVpn: config = $config")
+
+        // 非 激活状态
         if (!status.active) throw BlokadaException("Wrong tunnel state")
+
+        // gateway = 空
         if (config.gateway == null) throw BlokadaException("No gateway configured")
+
+
         status = TunnelStatus.inProgress()
+
         packetLoopService.startPlusMode(
-            useDoh = useDoh(dnsForPlusMode), dnsForPlusMode,
+            useDoh = useDoh(dnsForPlusMode),
+            dnsForPlusMode,
             tunnelConfig = systemTunnelService.getTunnelConfig(),
             privateKey = config.privateKey,
             gateway = config.gateway
         )
         this.blockaConfig = config
+
+        // public_key == 网关id？
         status = TunnelStatus.connected(config.gateway.public_key)
     }
 
     suspend fun disconnectVpn() {
         log.w("disconnectVpn")
+
         if (!status.active) throw BlokadaException("Wrong tunnel state")
+
+
         status = TunnelStatus.inProgress()
+
         packetLoopService.stop()
+
         status = TunnelStatus.filteringOnly(useDoh(dns))
     }
 
@@ -231,13 +268,22 @@ object EngineService {
         restart()
     }
 
+    // 重启
+    // 重启之前，必须处于 active的状态。
+    // 先 断开 之前的vpn，
     suspend fun restart() {
         log.w("restart")
         val status = getTunnelStatus()
         if (status.active) {
-            if (status.gatewayId != null) disconnectVpn()
+            if (status.gatewayId != null) {
+                disconnectVpn()
+            }
+
             restartSystemTunnel(lease)
-            if (status.gatewayId != null) connectVpn(blockaConfig!!)
+
+            if (status.gatewayId != null) {
+                connectVpn(blockaConfig!!)
+            }
         }
     }
 

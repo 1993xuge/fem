@@ -45,37 +45,42 @@ object BlocklistService {
     private val context = ContextService
 
     suspend fun setup() {
+        // 从文件目录加载 merged_blocklist 文件
         val destination = fileService.commonDir().file(MERGED_BLOCKLIST)
         log.w("setup: destination = $destination")
+
         if (!fileService.exists(destination)) {
             // merged_blocklist 文件不存在
             log.w("Initiating default blocklist files")
 
-            // 被允许的列表, 将 allowed文件中的内容清空
+            // 加载 用户主动允许的列表文件，并将其清空
             val allowed = fileService.commonDir().file(USER_ALLOWED)
             fileService.save(allowed, "")
             log.w("setup: allowed = $allowed")
 
-            // 不被允许的列表, 将 denied 文件中的内容清空
+            // 加载 用户主动禁止的列表文件，并将其清空
             val denied = fileService.commonDir().file(USER_DENIED)
             fileService.save(denied, "")
             log.w("setup: denied = $denied")
 
-            // 打开 default_blocklist.zip 文件，并将其解压缩
+            // 新建 default_blocklist.zip 文件
             val default = fileService.commonDir().file(DEFAULT_BLOCKLIST)
             log.w("setup: default = $default")
+            // 读取 asset目录下的 default_blocklist.zip 文件，将其写入到 应用目录的default_blocklist.zip文件中
             val asset = context.requireAppContext().assets.open(DEFAULT_BLOCKLIST)
             val decodedAsset = ZipService.decodeStream(asset, key = DEFAULT_BLOCKLIST)
-
             fileService.save(source = decodedAsset, destination = default)
+
 
             // 将 default_blocklist.zip 中的内容 merge 到 merged_blocklist
             fileService.merge(listOf(default), destination)
 
+            // 对 destination 中的内容进行 去重、排序等操作
             sanitize(destination)
         }
     }
 
+    // 下载 urls 列表中的内容
     suspend fun downloadAll(urls: List<Uri>) {
         log.v("Starting download of ${urls.size} urls")
         coroutineScope {
@@ -91,23 +96,30 @@ object BlocklistService {
         log.v("Done downloading")
     }
 
+    // 将
     suspend fun mergeAll(urls: List<Uri>) {
         log.v("Merging ${urls.size} blocklists")
         var destinations = urls.map { getDestination(it) }
 
         if (destinations.isEmpty()) {
             log.w("No selected blocklists, using default")
+            // 如果 destinations 是空，则 读取 默认的禁止列表
             destinations += fileService.commonDir().file(DEFAULT_BLOCKLIST)
         }
 
+        // 用户主动 禁止的列表
         val userDenied = fileService.commonDir().file(USER_DENIED)
         if (fileService.exists(userDenied)) {
             // Always include user blocklist (whitelist is included using engine api)
             log.v("Including user denied list")
+            // 用户主动禁止的文件存在，也将其 加入到 destinations
             destinations += userDenied
         }
 
+        // 加载 merged_blocklist 文件
         val merged = fileService.commonDir().file(MERGED_BLOCKLIST)
+
+        // 将 destinations 中的内容 都 写入到 merged_blocklist中
         fileService.merge(destinations, merged)
         sanitize(merged)
 
@@ -122,25 +134,33 @@ object BlocklistService {
         log.v("Done removing")
     }
 
+    // 加载 merged_blocklist 文件的内容。这个是 全部的block 列表
     fun loadMerged(): List<String> {
         return fileService.load(fileService.commonDir().file(MERGED_BLOCKLIST))
     }
 
+    // 加载 用户 主动 允许的列表
     fun loadUserAllowed(): List<String> {
         return fileService.load(fileService.commonDir().file(USER_ALLOWED))
     }
 
+    // 加载 用户主动禁止的列表
     fun loadUserDenied(): List<String> {
         return fileService.load(fileService.commonDir().file(USER_DENIED))
     }
 
+    // 读取 list 中的内容
+    // 将其排序， 并去重
     private fun sanitize(list: Uri) {
         log.v("Sanitizing list: $list")
         val content = fileService.load(list).sorted().distinct().toMutableList()
         var i = content.count()
         while (--i >= 0) {
-            if (!isLineOk(content[i])) content.removeAt(i)
-            else content[i] = removeIp(content[i]).trim()
+            if (!isLineOk(content[i])) {
+                content.removeAt(i)
+            } else {
+                content[i] = removeIp(content[i]).trim()
+            }
         }
         fileService.save(list, content)
         log.v("Sanitizing done, left ${content.size} lines")

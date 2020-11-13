@@ -28,16 +28,26 @@ import java.util.*
 
 @JsonClass(generateAdapter = true)
 data class Stats(
+    // 当前，被允许的次数
     val allowed: Int,
+    // 当前 被禁止的次数
     val denied: Int,
     val entries: List<HistoryEntry>
 )
 
 @JsonClass(generateAdapter = true)
 data class HistoryEntry(
+
+    // 被拦截的host，即name
     val name: String,
+
+    // 历史信息的中的type
     val type: HistoryEntryType,
+
+    //  最新一次 拦截的时间
     val time: Date,
+
+    // 拦截了 多少次
     val requests: Int
 )
 
@@ -51,11 +61,15 @@ enum class HistoryEntryType {
 @JsonClass(generateAdapter = true)
 data class Allowed(val value: List<String>) {
 
+    // 当前列表中包含 name，则直接返回。
+    // 否则 将 name添加到 当前Allowed 的列表中，并创建新的
     fun allow(name: String) = when (name) {
         in value -> this
         else -> Allowed(value = value + name)
     }
 
+    // 当前列表中包含 name，将 name 从 当前Allowed 的列表中删除，并创建新的Allowed对象。
+    // 否则 直接返回 当前Allowed对象
     fun unallow(name: String) = when (name) {
         in value -> Allowed(value = value - name)
         else -> this

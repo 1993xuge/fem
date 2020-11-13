@@ -51,10 +51,16 @@ object FileService {
 
     suspend fun merge(uris: List<Uri>, destination: Uri) {
         val merged = mutableListOf<String>()
+
+        // 遍历 uris，  并读取 其中的内容。
         for (uri in uris) {
             val content = load(uri)
+
+            // 将文件的内容保存到 merged中
             merged.addAll(content)
         }
+
+        // 将 merged 中的内容写到 destination
         save(destination, merged)
     }
 

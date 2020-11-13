@@ -32,7 +32,9 @@ import ui.utils.cause
 import utils.ExpiredNotification
 import utils.Logger
 
-
+/**
+ * 设置 过期的  闹钟
+ */
 object ExpirationService {
 
     private val log = Logger("Expiration")
@@ -43,15 +45,18 @@ object ExpirationService {
 
     var onExpired = {}
 
+    // 设置 过期的闹钟
     fun setExpirationAlarm(activeUntil: ActiveUntil) {
         log.v("Setting expiration alarm at: $activeUntil")
 
         if (activeUntil.beforeNow()) {
+            // 过期的时间点，在当前时间点 之前，则表明 已经过期了，直接返回
             log.w("Tried to set alarm for a date in the past, triggering immediately")
             onExpired()
             return
         }
 
+        // 否则 设置 超时时间，等到 时间到了，就显示 过期的通知。
         try {
             context.requireContext().let { ctx ->
                 val operation = Intent(ctx, ExpirationReceiver::class.java).let { intent ->

@@ -42,6 +42,8 @@ class BlockaRepoViewModel: ViewModel() {
     private val _repoConfig = MutableLiveData<BlockaRepoConfig>()
     val repoConfig: LiveData<BlockaRepoConfig> = _repoConfig.distinctUntilChanged()
 
+
+    // 12小时 刷新一次 BlockaRepoConfig
     fun maybeRefreshRepo() {
         viewModelScope.launch {
             try {
@@ -58,6 +60,7 @@ class BlockaRepoViewModel: ViewModel() {
         }
     }
 
+    // 刷新 BlockaRepoConfig
     fun refreshRepo() {
         viewModelScope.launch {
             try {
@@ -78,6 +81,7 @@ class BlockaRepoViewModel: ViewModel() {
         return config
     }
 
+    // 将 BlockaRepo 解析成 BlockaRepoConfig
     private fun processConfig(repo: BlockaRepo): BlockaRepoConfig {
         log.v("Processing config")
         val common = repo.common

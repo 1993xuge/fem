@@ -45,6 +45,8 @@ class AccountViewModel : ViewModel() {
 
     private val _account = MutableLiveData<Account>()
     val account: LiveData<Account> = _account
+
+    // 账户期满
     val accountExpiration: LiveData<ActiveUntil> =
         _account.map { it.active_until }.distinctUntilChanged()
 
@@ -59,8 +61,10 @@ class AccountViewModel : ViewModel() {
         viewModelScope.launch {
             log.w("restoreAccount: accountId = $accountId")
             try {
+                // 从服务端 读取 账户信息
                 val account = blockaRepository.fetchAccount(accountId)
                 log.w("restoreAccount: after fetch account with accountId, account = $accountId")
+                // 将其 存储到 本地，并更新 LiveData
                 updateLiveData(account)
             } catch (ex: BlokadaException) {
                 log.e("restoreAccount: Failed restoring account".cause(ex))
@@ -70,6 +74,7 @@ class AccountViewModel : ViewModel() {
         }
     }
 
+    // 刷新 账户状态
     fun refreshAccount() {
         viewModelScope.launch {
             try {
@@ -77,6 +82,7 @@ class AccountViewModel : ViewModel() {
                 refreshAccountInternal()
             } catch (ex: BlokadaException) {
                 when {
+                    // 没网
                     connectivity.isDeviceInOfflineMode() ->
                         log.w("refreshAccount: Could not refresh account but device is offline, ignoring")
                     else -> {
@@ -96,6 +102,7 @@ class AccountViewModel : ViewModel() {
         }
     }
 
+    // 检查 是否存在 Account，不存在，则创建新的
     fun checkAccount() {
         log.w("checkAccount")
         viewModelScope.launch {
@@ -112,6 +119,7 @@ class AccountViewModel : ViewModel() {
         }
     }
 
+    // 从本地 加载 账户信息，能加载到，则表明有账户信息
     private fun hasAccount() = try {
         persistence.load(Account::class)
         true
@@ -119,6 +127,7 @@ class AccountViewModel : ViewModel() {
         false
     }
 
+    // 调用 服务端接口，创建新的账户信息，然后将 账户信息 存储到本地，并更新LiveData
     private suspend fun createAccount(): Account {
         log.w("createAccount: Creating new account")
         val account = blockaRepository.createAccount()
@@ -127,13 +136,17 @@ class AccountViewModel : ViewModel() {
         return account
     }
 
+    // 从服务端 读取 账户信息，并将其 更新到本地
     private suspend fun refreshAccountInternal(): Account {
+        // 从 LiveData中读取 accountID，或者 从 本地加载 Account信息
         val accountId = _account.value?.id ?: persistence.load(Account::class).id
         log.v("refreshAccountInternal: accountId = $accountId")
 
+        // 通过 retrofit读取 账户信息
         val account = blockaRepository.fetchAccount(accountId)
         log.v("refreshAccountInternal: after fetchAccount: account = $account")
 
+        // 将 从 服务器上 获取到的 账户信息 更新到本地 和 LiveData中
         updateLiveData(account)
         log.v("refreshAccountInternal: Account refreshed")
 

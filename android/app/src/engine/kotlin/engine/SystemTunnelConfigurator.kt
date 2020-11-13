@@ -31,6 +31,11 @@ import utils.Logger
 import java.net.Inet4Address
 import java.net.Inet6Address
 
+/**
+ * 这个类是 用来 专门配置 vpn的。
+ *
+ * 在 建立 vpn连接前，会 调用 该类中的方法，配置 各个模式下的vpn
+ */
 object SystemTunnelConfigurator {
 
     private val log = Logger("STConfigurator")
@@ -75,7 +80,10 @@ object SystemTunnelConfigurator {
         }
 
         log.v("Setting MTU: $MTU")
+        // 设置VPN接口的最大传输单位（MTU）
         tun.setMtu(MTU)
+
+        // 设置VPN接口的文件描述符处于阻止/非阻止模式。true 为阻塞模式
         tun.setBlocking(true)
 
         // To not show our VPN as a metered connection
@@ -83,9 +91,13 @@ object SystemTunnelConfigurator {
             tun.setMetered(false)
         }
 
+        // 设置 跳过检查的应用名单
         val bypassed = apps.getPackageNamesOfAppsToBypass(forRealTunnel = true)
         log.v("Setting bypass for ${bypassed.count()} apps")
+
         bypassed.forEach {
+            // 添加 拒绝访问 VPN的应用。
+            // 当 拒绝该 应用程序 访问拦截 广告的vpn，即 允许 这些应用 弹出广告
             tun.addDisallowedApplication(it)
         }
     }
@@ -146,8 +158,13 @@ object SystemTunnelConfigurator {
          * than to break the app. We do not do that for the Plus mode.
           */
         log.w("Allowing bypass (experimental)")
+        // 允许所有应用绕过此VPN连接
+        // 默认情况下，来自应用程序的所有流量都通过VPN接口转发，并且应用程序无法回避VPN。
+        // 如果调用此方法，则应用程序可能会使用诸如ConnectivityManager#bindProcessToNetwork
+        // 直接在基础网络或他们拥有权限的任何其他网络上发送/接收的方法。
         tun.allowBypass()
 
+        // 这是个假的vpn，将很多常用的app，也加入到了 bypassed 列表中
         val bypassed = apps.getPackageNamesOfAppsToBypass()
         log.v("Setting bypass for ${bypassed.count()} apps")
         bypassed.forEach {

@@ -28,6 +28,9 @@ import utils.Logger
 
 private val log = Logger("Backup")
 
+/**
+ * 用来 实现 数据备份的
+ */
 object BackupService {
 
     fun requestBackup() {
