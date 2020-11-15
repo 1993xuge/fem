@@ -54,11 +54,13 @@ class PacksFragment : Fragment() {
 
         val adapter = PacksAdapter(interaction = object : PacksAdapter.Interaction {
 
+            // 点击 列表项
             override fun onClick(pack: Pack) {
                 val nav = findNavController()
                 nav.navigate(PacksFragmentDirections.actionNavigationPacksToPackDetailFragment(pack.id))
             }
 
+            // 点击了 列表项 开关
             override fun onSwitch(pack: Pack, on: Boolean) {
                 if (on) {
                     vm.install(pack)

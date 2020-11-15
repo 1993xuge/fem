@@ -41,6 +41,9 @@ object DozeService {
 
     var onDozeChanged = { isDoze: Boolean -> }
 
+    /**
+     * 注册 设备 空闲模式变化的监听 和 获取 PowerManager 对象
+     */
     fun setup(ctx: Context) {
         ctx.registerReceiver(DozeReceiver(), IntentFilter(PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED))
         powerManager = ctx.getSystemService(Context.POWER_SERVICE) as PowerManager

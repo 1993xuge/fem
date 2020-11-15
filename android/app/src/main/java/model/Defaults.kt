@@ -37,6 +37,7 @@ object Defaults {
     fun syncableConfig() = SyncableConfig(rateAppShown = false, notFirstRun = false)
     fun dnsWrapper() = DnsWrapper(DnsDataSource.getDns())
 
+    // BlockaConfig 的默认信息
     fun blockaConfig() = BlockaConfig(
         privateKey = "",
         publicKey = "",

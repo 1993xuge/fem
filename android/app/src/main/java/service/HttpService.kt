@@ -21,6 +21,7 @@
 
 package service
 
+import android.util.Log
 import engine.EngineService
 import model.Uri
 import okhttp3.OkHttpClient
@@ -43,11 +44,14 @@ object HttpService {
         }
 
         addInterceptor { chain ->
-            val request = chain.request().newBuilder().header("User-Agent", env.getUserAgent()).build()
+            val request =
+                chain.request().newBuilder().header("User-Agent", env.getUserAgent()).build()
             chain.proceed(request)
         }
 
-        if (!env.isPublicBuild()) addInterceptor(HttpLoggingInterceptor().apply {
+        if (!env.isPublicBuild()) addInterceptor(HttpLoggingInterceptor(HttpLoggingInterceptor.Logger { message ->
+            Log.d("retrofit", "  message = $message")
+        }).apply {
             level = HttpLoggingInterceptor.Level.BODY
         })
     }.build()

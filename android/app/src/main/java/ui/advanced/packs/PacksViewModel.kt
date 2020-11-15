@@ -42,6 +42,7 @@ class PacksViewModel : ViewModel() {
     private val log = Logger("Pack")
     private val persistence = PersistenceService
     private val engine = EngineService
+
     private val blocklist = BlocklistService
     private val alert = AlertDialogService
 
@@ -78,9 +79,14 @@ class PacksViewModel : ViewModel() {
             try {
                 var urls = pack.getUrls()
 
+                urls.forEach { log.v("install : url = $it") }
+
                 // Also include urls of any active pack
                 _packs.value?.let { packs ->
-                    val moreUrls = packs.packs.filter { it.status.installed }.flatMap { it.getUrls() }
+                    // 从 packs 过滤出 已经安装的url
+                    val moreUrls =
+                        packs.packs.filter { it.status.installed }.flatMap { it.getUrls() }
+
                     urls = (urls + moreUrls).distinct()
                 }
 

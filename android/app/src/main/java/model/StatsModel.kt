@@ -98,5 +98,6 @@ data class AdsCounter(
     val runtimeValue: Long = 0
 ) {
     fun get() = persistedValue + runtimeValue
+
     fun roll() = AdsCounter(persistedValue = persistedValue + runtimeValue)
 }

@@ -69,20 +69,38 @@ class MainApplication: LocalizationApplication(), ViewModelStoreOwner {
 
     override fun onCreate() {
         super.onCreate()
+
+        // 设置 当前的Context
         ContextService.setContext(this)
+
         LegacyAccountImport.setup()
+
+        // 初始化 日志Service
         LogService.setup()
+
+        // 注册 设备 空闲模式变化的监听器
         DozeService.setup(this)
+
+        // 初始化 通用的ViewModel
         setupEvents()
+
+        //
         MonitorService.setup(settingsVM.getUseForegroundService())
     }
 
     private fun setupEvents() {
+        // 账户相关的ViewModel
         accountVM = ViewModelProvider(this).get(AccountViewModel::class.java)
+
+        // tunnel 相关信息
         tunnelVM = ViewModelProvider(this).get(TunnelViewModel::class.java)
+
         settingsVM = ViewModelProvider(this).get(SettingsViewModel::class.java)
+
         blockaRepoVM = ViewModelProvider(this).get(BlockaRepoViewModel::class.java)
+
         statsVM = ViewModelProvider(this).get(StatsViewModel::class.java)
+
         adsCounterVM = ViewModelProvider(this).get(AdsCounterViewModel::class.java)
 
         accountVM.account.observeForever { account ->

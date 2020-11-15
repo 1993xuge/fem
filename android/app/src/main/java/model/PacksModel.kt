@@ -113,7 +113,7 @@ data class PackStatus(
 @JsonClass(generateAdapter = true)
 data class Packs(
     val packs: List<Pack>,
-    val version : Int?
+    val version: Int?
 ) {
     fun replace(pack: Pack): Packs {
         return Packs(
@@ -139,17 +139,28 @@ data class Packs(
 //    }
 
 fun Pack.Companion.mocked(
-    id: PackId, tags: List<Tag> = emptyList(),
-    title: String, slugline: String = "", description: String = "",
-    creditName: String = "", creditUrl: String = "",
+    id: PackId,
+    tags: List<Tag> = emptyList(),
+    title: String,
+    slugline: String = "",
+    description: String = "",
+    creditName: String = "",
+    creditUrl: String = "",
     configs: List<PackConfig> = emptyList()
 ): Pack {
     return Pack(
-        id, tags, sources = emptyList(), meta = PackMetadata(
-            title, slugline, description, creditName, creditUrl, rating = null
-        ), configs = configs, status = PackStatus(
-            installed = false, updatable = false,
-            installing = false, badge = false, config = emptyList(), hits = 0
+        id,
+        tags,
+        sources = emptyList(),
+        meta = PackMetadata(title, slugline, description, creditName, creditUrl, rating = null),
+        configs = configs,
+        status = PackStatus(
+            installed = false,
+            updatable = false,
+            installing = false,
+            badge = false,
+            config = emptyList(),
+            hits = 0
         )
     )
 }
@@ -163,9 +174,11 @@ fun Pack.allTagsCommaSeparated(): String {
     }
 }
 
-fun Pack.changeStatus(installed: Boolean? = null, updatable: Boolean? = null, installing: Boolean? = null,
-                                               badge: Boolean? = null, enabledConfig: List<PackConfig>? = null,
-                                               config: PackConfig? = null, hits: Int? = null): Pack {
+fun Pack.changeStatus(
+    installed: Boolean? = null, updatable: Boolean? = null, installing: Boolean? = null,
+    badge: Boolean? = null, enabledConfig: List<PackConfig>? = null,
+    config: PackConfig? = null, hits: Int? = null
+): Pack {
     return Pack(
         this.id,
         this.tags,
@@ -185,7 +198,9 @@ fun Pack.changeStatus(installed: Boolean? = null, updatable: Boolean? = null, in
 
 private fun Pack.switchConfig(config: PackConfig?): List<PackConfig> {
     var newConfig = (if (config == null) this.status.config else
-    if (this.status.config.contains(config)) this.status.config.filter { it != config } else this.status.config + listOf(config))
+        if (this.status.config.contains(config)) this.status.config.filter { it != config } else this.status.config + listOf(
+            config
+        ))
 
     if (newConfig.isEmpty()) {
         // Dont allow to have empty config (unless originally it's empty)

@@ -26,6 +26,9 @@ import model.AccountId
 import model.Lease
 import model.LeaseRequest
 
+/**
+ * 与账户相关的 网络请求
+ */
 object BlockaRepository {
 
     private val dataSource = BlockaDataSource

@@ -55,6 +55,7 @@ class TunnelViewModel : ViewModel() {
     private val _config = MutableLiveData<BlockaConfig>()
     val config: LiveData<BlockaConfig> = _config
 
+    // 引擎的状态信息
     private val _tunnelStatus = MutableLiveData<TunnelStatus>()
     val tunnelStatus: LiveData<TunnelStatus> = _tunnelStatus.distinctUntilChanged()
 
@@ -63,12 +64,16 @@ class TunnelViewModel : ViewModel() {
         engine.onTunnelStoppedUnexpectedly = this::handleTunnelStoppedUnexpectedly
 
         viewModelScope.launch {
+            // 从本地加载 BlockaConfig
             val cfg = persistence.load(BlockaConfig::class)
             log.v("init: BlockaConfig = $cfg")
             _config.value = cfg
+
+            // 现将 Tunnel的状态设置为 off
             log.v("init: update TunnelStatus with off")
             TunnelStatus.off().emit()
 
+            // 如果 BlockaConfig 中表明，之前 Tunnel是被打开的，则进程启动时 也将它 打开
             if (cfg.tunnelEnabled) {
                 // 之前 是 打开的状态，所以 现在 也需要 打开
                 log.w("init: Starting tunnel after app start, as it was active before")
@@ -107,10 +112,21 @@ class TunnelViewModel : ViewModel() {
         }
     }
 
+    /**
+     * 打开 广告拦截的开关
+     * 1、先检查 是否有vpn的权限，如果没有Vpn权限，则直接将状态更新为 noPermissions
+     * 2、从 Engine中获取 状态。
+     *  2.1）如果 Engine 已经处于打开 或者 正在打开的状态，直接更新 状态
+     *  2.2）未打开
+     *      2.2.1）将状态更新为 inProgress
+     *      2.2.2）startTunnel
+     *      2.2.3）将 tunnelEnabled 设置为true
+     *      2.2.4）再次 更新状态
+     */
     fun turnOn() {
         log.v("turnOn")
         viewModelScope.launch {
-            // 先 检查是否有vpn的权限
+            // 1、先 检查是否有vpn的权限
             if (!vpnPerm.hasPermission()) {
                 // 没有权限。将状态 更新为没权限，再关闭
                 log.v("Requested to start tunnel, no VPN permissions")
@@ -129,15 +145,24 @@ class TunnelViewModel : ViewModel() {
                         TunnelStatus.inProgress().emit()
                         val cfg = _config.value ?: throw BlokadaException("Config not set")
                         log.v("turnOn : cfg = $cfg")
+
+                        // 实际的开启动作
                         if (cfg.vpnEnabled) {
-                            // 开启 vpn
+                            // 开启 Tunnel
                             engine.startTunnel(cfg.lease)
+                            // 连接 plus模式下的 vpn
                             engine.connectVpn(cfg)
+                            // 检查 lease
                             lease.checkLease(cfg)
                         } else {
+                            // 开启 Tunnel
                             engine.startTunnel(null)
                         }
+
+                        // 此处 是 唯一将 tunnelEnabled 设置成true的地方
                         cfg.copy(tunnelEnabled = true).emit()
+
+                        // 重新获取 tunnel的状态，并进行更新
                         engine.getTunnelStatus().emit()
                         log.v("Tunnel started successfully")
                     } catch (ex: Exception) {
@@ -151,6 +176,9 @@ class TunnelViewModel : ViewModel() {
         }
     }
 
+    /**
+     * 关闭广告拦截的开关
+     */
     fun turnOff() {
         log.v("turnOff")
         viewModelScope.launch {
@@ -173,22 +201,38 @@ class TunnelViewModel : ViewModel() {
         }
     }
 
+    /**
+     * 在 plus Button上 将 Gateway 打开
+     *
+     * 要打开 gateway ，必须满足 以下 条件
+     * 1、BlockaConfig 不为空
+     * 2、lease 不为空。而 lease 的获取 是与 相关 Gateway
+     */
     fun switchGatewayOn() {
         log.v("switchGatewayOn")
         viewModelScope.launch {
             log.v("Requested to switch gateway on")
             val s = engine.getTunnelStatus()
+
             if (!s.inProgress && s.gatewayId == null) {
                 try {
                     TunnelStatus.inProgress().emit()
+
+                    // tunnel 未激活
                     if (!s.active) throw BlokadaException("Tunnel is not active")
+                    // BlockaConfig == null
                     val cfg = _config.value ?: throw BlokadaException("BlockaConfig not set")
+                    // lease == null
                     if (cfg.lease == null) throw BlokadaException("Lease not set in BlockaConfig")
 
+                    // 重新 打开 Tunnel
                     engine.restartSystemTunnel(cfg.lease)
+                    // 连接 vpn
                     engine.connectVpn(cfg)
 
+                    // vpnEnabled 设置为 true
                     cfg.copy(vpnEnabled = true).emit()
+
                     engine.getTunnelStatus().emit()
                     log.v("Gateway switched on successfully")
 
@@ -210,6 +254,9 @@ class TunnelViewModel : ViewModel() {
         }
     }
 
+    /**
+     * 在 plus Button上 将 Gateway 关闭
+     */
     fun switchGatewayOff() {
         log.v("switchGatewayOff")
         viewModelScope.launch {
@@ -235,23 +282,49 @@ class TunnelViewModel : ViewModel() {
         }
     }
 
+    /**
+     * 切换 Gateway
+     *
+     * 使用 传入的网关 和 账户 信息，创建 新的 Lease，并重启 Engine
+     */
     fun changeGateway(gateway: Gateway) {
         log.v("changeGateway")
         viewModelScope.launch {
             log.v("Requested to change gateway")
+
+            // engine 当前的状态
             val s = engine.getTunnelStatus()
+
             if (!s.inProgress) {
                 try {
+                    // 将 Tunnel的状态 设置为 progress
                     TunnelStatus.inProgress().emit()
                     var cfg = _config.value ?: throw BlokadaException("BlockaConfig not set")
+
+                    // 根据网关获取 lease
                     val lease = lease.createLease(cfg, gateway)
+
+                    // 复制 一份 BlockaConfig。并更新其 vpnEnabled 、lease、gateway
                     cfg = cfg.copy(vpnEnabled = true, lease = lease, gateway = gateway)
 
-                    if (s.active && s.gatewayId != null) engine.disconnectVpn()
-                    if (s.active) engine.restartSystemTunnel(lease)
-                    else engine.startTunnel(lease)
+                    // 如果当前的状态是  激活状态，并且 gatewayId 不为空
+                    if (s.active && s.gatewayId != null) {
+                        // 先断开 vpn
+                        engine.disconnectVpn()
+                    }
+
+                    if (s.active) {
+                        // 使用新的  lease ，重启 tunnel
+                        engine.restartSystemTunnel(lease)
+                    } else {
+                        // 直接 启动 tunnel
+                        engine.startTunnel(lease)
+                    }
+
+                    // 连接 vpn
                     engine.connectVpn(cfg)
 
+                    // 更新 BlockaConfig
                     cfg.emit()
                     engine.getTunnelStatus().emit()
                     log.v("Gateway changed successfully")
@@ -259,6 +332,7 @@ class TunnelViewModel : ViewModel() {
                     handleException(ex)
                 }
             } else {
+                // 正在 打开中
                 log.w("Tunnel busy")
                 s.emit()
             }
@@ -332,10 +406,12 @@ class TunnelViewModel : ViewModel() {
         }
     }
 
+    //
     fun isMe(publicKey: PublicKey): Boolean {
         return publicKey == _config.value?.publicKey
     }
 
+    // 判断 传入的 gatewayId 是否是 当前正在使用的 gatewayId
     fun isCurrentlySelectedGateway(gatewayId: GatewayId): Boolean {
         return gatewayId == _config.value?.gateway?.public_key
     }

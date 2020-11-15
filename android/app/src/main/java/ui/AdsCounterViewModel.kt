@@ -37,6 +37,7 @@ class AdsCounterViewModel: ViewModel() {
 
     init {
         viewModelScope.launch {
+            // 加载存储的AdsCounter数据
             var counter = persistence.load(AdsCounter::class)
             if (counter.runtimeValue != 0L) {
                 log.w("Rolling ads counter loaded from persistence")

@@ -32,15 +32,24 @@ import java.lang.Exception
 
 class LocationViewModel : ViewModel() {
 
+    private val log = Logger("LocationViewModel")
+
     private val blocka = BlockaRepository
 
     private val _locations = MutableLiveData<List<Gateway>>()
     val locations: LiveData<List<Gateway>> = _locations.distinctUntilChanged()
 
+    // 从服务端 获取 Gateway 列表
     fun refreshLocations() {
         viewModelScope.launch {
             try {
-                _locations.value = blocka.fetchGateways()
+                val list = blocka.fetchGateways()
+
+                list.forEach {
+                    log.v("Gateway: $it")
+                }
+
+                _locations.value = list
             } catch (ex: Exception) {
                 Logger.w("Location", "Could not load locations".cause(ex))
             }

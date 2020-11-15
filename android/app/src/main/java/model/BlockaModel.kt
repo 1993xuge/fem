@@ -50,7 +50,9 @@ data class Account(
     // 激活的到期时间
     val active_until: ActiveUntil = Date(0)
 ) {
-    fun isActive() = active_until > Date()
+    // TODO: 2020/11/15 测试代码
+//    fun isActive() = active_until > Date()
+    fun isActive() = true
 
     override fun toString(): String {
         return "Account(id='$id', active_until=$active_until)"

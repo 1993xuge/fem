@@ -65,6 +65,9 @@ object LeaseService {
         return blocka.deleteLease(lease.account_id, lease)
     }
 
+    // 检查 BlockaConfig中的Lease
+    // 当lease 和 gateway 不为空时，获取服务端的lease信息
+    // 如果 lease 过期了，则 重新 向服务端 请求 lease信息
     suspend fun checkLease(config: BlockaConfig) {
         if (!config.vpnEnabled) {
             return

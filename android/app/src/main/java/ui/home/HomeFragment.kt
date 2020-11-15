@@ -75,15 +75,21 @@ class HomeFragment : Fragment() {
         var plusButtonReady = false
 
         val longStatus: TextView = root.findViewById(R.id.home_longstatus)
+
+        // 传入 TunnelStatus 和 counter
         val updateLongStatus = { s: TunnelStatus, counter: Long? ->
             longStatus.text = when {
                 s.inProgress -> getString(R.string.home_status_detail_progress)
+
+                // 全功能版
                 s.active && s.gatewayId != null && counter == null -> {
                     (
                             getString(R.string.home_status_detail_active) + "\n" +
                                     getString(R.string.home_status_detail_plus)
                             ).withBoldSections(requireContext().getColorFromAttr(R.attr.colorRingPlus1))
                 }
+
+                // 阉割版
                 s.active && EnvironmentService.isSlim() -> {
                     getString(R.string.home_status_detail_active_slim)
                         .withBoldSections(requireContext().getColorFromAttr(R.attr.colorRingLibre1))
@@ -109,8 +115,11 @@ class HomeFragment : Fragment() {
             }
         }
 
+        // tunnel状态变化的监听器
         vm.tunnelStatus.observe(viewLifecycleOwner, Observer { s ->
             log.v("observe : tunnelStatus = $s")
+
+            //
             powerButton.cover = !s.inProgress && !s.active
             powerButton.loading = s.inProgress
             powerButton.blueMode = s.active
@@ -122,10 +131,14 @@ class HomeFragment : Fragment() {
                     s.inProgress -> Unit
                     s.error != null -> Unit
                     s.active -> {
+                        // 关闭
                         vm.turnOff()
                         adsCounterVm.roll()
                     }
-                    else -> vm.turnOn()
+                    else -> {
+                        // 开启
+                        vm.turnOn()
+                    }
                 }
             }
 
@@ -148,9 +161,12 @@ class HomeFragment : Fragment() {
                 else -> showFailureDialog(s.error)
             }
 
+            // 在 tunnel状态激活后，plusButton可见
             plusButton.visible = s.inProgress || s.active
             plusButton.isEnabled = !s.inProgress
+
             if (!s.inProgress) {
+
                 plusButton.checked = s.gatewayId != null
             }
 
@@ -173,8 +189,13 @@ class HomeFragment : Fragment() {
         plusButton.onNoLocation = ::showLocationSheet
 
         plusButton.onActivated = { activated ->
-            if (activated) vm.switchGatewayOn()
-            else vm.switchGatewayOff()
+            if (activated) {
+                // 将 GateWay  打开
+                vm.switchGatewayOn()
+            } else {
+                // 将 GateWay关闭
+                vm.switchGatewayOff()
+            }
         }
 
         accountVM.account.observe(viewLifecycleOwner, Observer { account ->
@@ -183,8 +204,13 @@ class HomeFragment : Fragment() {
             plusButtonReady = true // Hacky
 
             plusButton.onClick = {
-                if (account.isActive()) showLocationSheet()
-                else showPlusSheet()
+                if (account.isActive()) {
+                    // 账户 处于 激活状态
+                    showLocationSheet()
+                } else {
+                    // 账户未激活
+                    showPlusSheet()
+                }
             }
 
             if (!account.isActive()) {

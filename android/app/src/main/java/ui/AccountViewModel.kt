@@ -35,6 +35,9 @@ import service.PersistenceService
 import ui.utils.cause
 import utils.Logger
 
+/**
+ * 账户相关的ViewoModel
+ */
 class AccountViewModel : ViewModel() {
 
     private val log = Logger("Account")
@@ -43,10 +46,11 @@ class AccountViewModel : ViewModel() {
     private val alert = AlertDialogService
     private val connectivity = ConnectivityService
 
+    // 保存 当前的账户信息
     private val _account = MutableLiveData<Account>()
     val account: LiveData<Account> = _account
 
-    // 账户期满
+    // 保存当前账户 过期的时间
     val accountExpiration: LiveData<ActiveUntil> =
         _account.map { it.active_until }.distinctUntilChanged()
 
@@ -75,6 +79,7 @@ class AccountViewModel : ViewModel() {
     }
 
     // 刷新 账户状态
+    // 从服务端 获取 账户信息，如果 出现异常，则加载本地的账户信息
     fun refreshAccount() {
         viewModelScope.launch {
             try {

@@ -46,7 +46,7 @@ data class BlockaConfig(
     // 是否 开启 vpn
     val vpnEnabled: Boolean,
 
-    // 之前 tunnel 是否 打开了
+    // tunnel 是否 打开了
     val tunnelEnabled: Boolean = false
 ) {
     fun getAccountId() = keysGeneratedForAccountId
