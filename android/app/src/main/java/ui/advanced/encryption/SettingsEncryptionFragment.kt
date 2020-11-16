@@ -53,6 +53,7 @@ class SettingsEncryptionFragment : PreferenceFragmentCompat() {
             true
         }
 
+        // 是否使用 BlockaDns 在 plus 模式
         val useBlockaDns: SwitchPreference = findPreference("encryption_blockadns")!!
         useBlockaDns.setOnPreferenceChangeListener { _, newValue ->
             vm.setUseBlockaDnsInPlusMode(newValue as Boolean)
@@ -61,6 +62,7 @@ class SettingsEncryptionFragment : PreferenceFragmentCompat() {
 
         vm.dnsEntries.observe(viewLifecycleOwner, { entries ->
             val useDoh = vm.localConfig.value?.useDnsOverHttps ?: false
+
             dns.updateDnsList(entries, useDoh)
         })
 

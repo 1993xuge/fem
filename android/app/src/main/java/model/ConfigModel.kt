@@ -56,16 +56,38 @@ data class BlockaConfig(
 // 本地设置？
 @JsonClass(generateAdapter = true)
 data class LocalConfig(
+
+    // dns
     val dnsChoice: DnsId,
+
+    // 是否 使用 外部浏览器
     val useChromeTabs: Boolean = false,
+
+    // 是否 使用 Dark 模式
     val useDarkTheme: Boolean? = null,
+
+    // 主题
     val themeName: String? = null,
+
+    // 语言
     val locale: String? = null,
+
+    // 是否允许 ipv6
     val ipv6: Boolean = true,
+
+    // 是否 使用 云备份
     val backup: Boolean = true,
+
+    // 是否使用 doh
     val useDnsOverHttps: Boolean = false,
+
+    // 是否 在 plus模式中 使用 BlockaDns
     val useBlockaDnsInPlusMode: Boolean = true,
+
+    // 是否是 躲避版本
     val escaped: Boolean = false,
+
+    // 是否使用前台Service
     val useForegroundService: Boolean = false
 )
 

@@ -33,8 +33,12 @@ object Defaults {
     fun allowed() = Allowed(value = listOf())
     fun denied() = Denied(value = listOf())
     fun packs() = Packs(PackDataSource.getPacks(), version = PACKS_VERSION)
+
+    // 默认的 dns。
     fun localConfig() = LocalConfig(dnsChoice = BuildSpecificDefaults.dns)
+
     fun syncableConfig() = SyncableConfig(rateAppShown = false, notFirstRun = false)
+
     fun dnsWrapper() = DnsWrapper(DnsDataSource.getDns())
 
     // BlockaConfig 的默认信息

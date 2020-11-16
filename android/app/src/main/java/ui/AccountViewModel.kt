@@ -134,7 +134,7 @@ class AccountViewModel : ViewModel() {
 
     // 调用 服务端接口，创建新的账户信息，然后将 账户信息 存储到本地，并更新LiveData
     private suspend fun createAccount(): Account {
-        log.w("createAccount: Creating new account")
+        log.w("frefreshAccountInternalcreateAccount: Creating new account")
         val account = blockaRepository.createAccount()
         log.w("createAccount: account = $account")
         updateLiveData(account)

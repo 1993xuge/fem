@@ -65,6 +65,7 @@ class SettingsViewModel : ViewModel() {
         log.v("Config: ${_localConfig.value}")
     }
 
+    // 切换 DNS
     fun setSelectedDns(id: DnsId) {
         _localConfig.value?.let { current ->
             if (id != current.dnsChoice) {
@@ -97,6 +98,7 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
+    // 设置 是否 使用 BlockaDns 在 plus 模式中
     fun setUseBlockaDnsInPlusMode(use: Boolean) {
         _localConfig.value?.let { current ->
             viewModelScope.launch {
