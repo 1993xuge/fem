@@ -92,23 +92,29 @@ data class Gateway(
 
 @JsonClass(generateAdapter = true)
 data class Lease(
+    // 账户id
     val account_id: AccountId,
+
+    // 公钥？
     val public_key: PublicKey,
+
+    // 网关id？
     val gateway_id: GatewayId,
+
+    // 过期时间
     val expires: ActiveUntil,
+
+    // 别名？
     val alias: String?,
+
+    //
     val vip4: String,
+
     val vip6: String
 ) {
     fun niceName() = if (alias?.isNotBlank() == true) alias else public_key.take(5)
 
     fun isActive() = expires > Date()
-
-    override fun toString(): String {
-        return "Lease(account_id='$account_id', public_key='$public_key', gateway_id='$gateway_id', expires=$expires, alias=$alias, vip4='$vip4', vip6='$vip6')"
-    }
-
-    companion object {}
 }
 
 @JsonClass(generateAdapter = true)

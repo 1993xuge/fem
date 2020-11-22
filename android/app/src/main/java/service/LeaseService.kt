@@ -33,6 +33,7 @@ object LeaseService {
     private val env = EnvironmentService
 
     // 通过 服务端 接口 创建 lease 信息
+    // 切换网关时，才会 请求接口，创建 Lease
     suspend fun createLease(config: BlockaConfig, gateway: Gateway): Lease {
         log.w("Creating lease")
 
@@ -75,10 +76,12 @@ object LeaseService {
 
         config.lease?.let { lease ->
             log.v("Checking lease")
+
             config.gateway?.let { gateway ->
                 try {
                     // 从服务端 获取 当前的 Lease
                     val currentLease = getCurrentLease(config, gateway)
+
                     if (!currentLease.isActive()) {
                         // Lease 过期了，从服务端 获取 新的
                         log.w("Lease expired, refreshing")
@@ -99,12 +102,15 @@ object LeaseService {
         }
     }
 
-    // 从服务端 获取当前的 Lease 信息
+    // 从服务端  获取 当前GateWay对应的 Lease
     private suspend fun getCurrentLease(config: BlockaConfig, gateway: Gateway): Lease {
+        // 获取 当前用户的 Lease列表
         val leases = blocka.fetchLeases(config.getAccountId())
 
+        // Lease 列表 是空的。抛出异常
         if (leases.isEmpty()) throw BlokadaException("No leases found for this account")
 
+        //
         val current =
             leases.firstOrNull { it.public_key == config.publicKey && it.gateway_id == gateway.public_key }
 

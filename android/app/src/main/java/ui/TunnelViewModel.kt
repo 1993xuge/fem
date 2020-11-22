@@ -286,6 +286,8 @@ class TunnelViewModel : ViewModel() {
      * 切换 Gateway
      *
      * 使用 传入的网关 和 账户 信息，创建 新的 Lease，并重启 Engine
+     *
+     * 由于 打开开关后，才能看见切换网关的入口
      */
     fun changeGateway(gateway: Gateway) {
         log.v("changeGateway")

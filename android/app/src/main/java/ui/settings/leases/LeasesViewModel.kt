@@ -39,6 +39,7 @@ class LeasesViewModel : ViewModel() {
     private val _leases = MutableLiveData<List<Lease>>()
     val leases = _leases as LiveData<List<Lease>>
 
+    // 根据 账户id 获取 Lease 列表
     fun fetch(accountId: AccountId) {
         viewModelScope.launch {
             try {
@@ -49,6 +50,7 @@ class LeasesViewModel : ViewModel() {
         }
     }
 
+    // 删除 当前账户的 Lease，之后 再获取 当前用户 最新的Lease列表
     fun delete(accountId: AccountId, lease: Lease) {
         log.w("Deleting lease: ${lease.alias}")
         viewModelScope.launch {

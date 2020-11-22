@@ -122,6 +122,7 @@ class LocationFragment : BottomSheetFragment() {
         }
 
         item.setOnClickListener {
+            // 在 列表中点击 切换 网关地址
             tunnelVM.changeGateway(location)
             dismiss()
         }
