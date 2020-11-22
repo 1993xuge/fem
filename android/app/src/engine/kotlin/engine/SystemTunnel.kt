@@ -181,6 +181,8 @@ class SystemTunnel : VpnService() {
 // 当 vpn 连接成功后，生成的相关信息
 class SystemTunnelConfig(
     val fd: ParcelFileDescriptor,
+
+    //
     val deviceIn: FileInputStream,
     val deviceOut: FileOutputStream
 )

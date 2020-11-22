@@ -23,6 +23,9 @@ package repository
 
 import model.Dns
 
+/**
+ * Dns 列表
+ */
 object DnsDataSource {
 
     fun getDns() = listOf(
@@ -31,16 +34,19 @@ object DnsDataSource {
             ips = listOf("176.103.130.130", "176.103.130.131"),
             label = "AdGuard"
         ),
+
         Dns.plaintextDns(
             id = "adguard_family",
             ips = listOf("176.103.130.132", "176.103.130.134"),
             label = "AdGuard: family"
         ),
+
         Dns.plaintextDns(
             id = "alternate",
             ips = listOf("23.253.163.53", "198.101.242.72"),
             label = "Alternate DNS"
         ),
+
         Dns(
             id = "blahdns.de",
             ips = listOf("159.69.198.101", "2a01:4f8:1c1c:6b4b::1"),
@@ -49,6 +55,7 @@ object DnsDataSource {
             path = "dns-query",
             label = "Blah DNS (Germany)"
         ),
+
         Dns(
             id = "blahdns.jp",
             ips = listOf("45.32.55.94", "2001:19f0:7001:3259:5400:02ff:fe71:0bc9"),
@@ -57,6 +64,7 @@ object DnsDataSource {
             path = "dns-query",
             label = "Blah DNS (Japan)"
         ),
+
         Dns(
             id = "cloudflare",
             ips = listOf("1.1.1.1", "1.0.0.1", "2606:4700:4700::1111", "2606:4700:4700::1001"),
@@ -65,6 +73,7 @@ object DnsDataSource {
             path = "dns-query",
             label = "Cloudflare"
         ),
+
         Dns.plaintextDns(
             id = "cloudflare.malware",
             ips = listOf("1.1.1.2", "1.0.0.2", "2606:4700:4700::1112", "2606:4700:4700::1002"),

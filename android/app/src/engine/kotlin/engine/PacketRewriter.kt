@@ -55,14 +55,15 @@ internal class PacketRewriter(
     }
 
     fun handleToDevice(destination: ByteBuffer, length: Int): Boolean {
-        if (isUdp (destination) && (
-                    srcAddress4(destination, dns.externalForIndex(0).address) ||
-                            (dns.count() > 1 && srcAddress4(destination, dns.externalForIndex(1).address))
-                    )
-        ) {
+        val isUdp = isUdp(destination)
+        val result0 = srcAddress4(destination, dns.externalForIndex(0).address)
+        val result1 = srcAddress4(destination, dns.externalForIndex(1).address)
+        if (isUdp && (result0 || (dns.count() > 1 && result1))) {
             rewriteSrcDns4(destination, length)
             return true
-        } else return false
+        } else {
+            return false
+        }
     }
 
     private val ipv4Version = (1 shl 6).toByte()
@@ -70,9 +71,12 @@ internal class PacketRewriter(
 
     private fun interceptDns(packetBytes: ByteArray, length: Int): Boolean {
         return if ((packetBytes[0] and ipv4Version) == ipv4Version) {
-            if (isUdp(packetBytes) && dstAddress4(packetBytes, length, dnsProxyDst4))
+            // ipv4的数据包？
+            if (isUdp(packetBytes) && dstAddress4(packetBytes, length, dnsProxyDst4)) {
                 parseDns(packetBytes, length)
-            else false
+            } else {
+                false
+            }
         } else if ((packetBytes[0] and ipv6Version) == ipv6Version) {
             log.w("ipv6 ad blocking not supported, passing through")
             false
@@ -81,6 +85,7 @@ internal class PacketRewriter(
 
     private fun parseDns(packetBytes: ByteArray, length: Int): Boolean {
         val originEnvelope = try {
+            // 获取  原始数据 的报文
             IpSelector.newPacket(packetBytes, 0, length) as IpPacket
         } catch (e: Exception) {
             return false
@@ -102,11 +107,18 @@ internal class PacketRewriter(
         }
         if (dnsMessage.question == null) return false
 
+        // 获取 host信息
         val host = dnsMessage.question.name.toString(true).toLowerCase(Locale.ENGLISH)
+
         return if (!filter || filtering.allowed(host) || !filtering.denied(host)) {
+            // 不过滤 host 或 该host被用户 主动的允许了  或者 该host不在拦截的列表中。
+            // 总之，此处 是 不拦截 该host的数据
+
             val dnsIndex = packetBytes[19].toInt() - 1
             val dnsAddress = dns.externalForIndex(dnsIndex)
 
+            // 构造一个新的 udp报文
+            // 这个是 构造一个 从 原始地址  到 vpn虚拟地址的 报文？？？
             val udpForward = UdpPacket.Builder(udp)
                 .srcAddr(originEnvelope.header.srcAddr)
                 .dstAddr(dnsAddress)
@@ -116,6 +128,7 @@ internal class PacketRewriter(
                 .correctLengthAtBuild(true)
                 .payloadBuilder(UnknownPacket.Builder().rawData(udpRaw))
 
+            // 构造一个 ipv4的数据报文
             val envelope = IpV4Packet.Builder(originEnvelope as IpV4Packet)
                 .srcAddr(originEnvelope.header.srcAddr as Inet4Address)
                 .dstAddr(dnsAddress as Inet4Address)
@@ -244,7 +257,10 @@ fun handleForwardException(ex: Exception): Boolean {
             true
         }
         c is SocketException && c.message == "Pending connect failure" -> {
-            Logger.v("Rewriter", "Got pending connect failure, reconnecting socket (probably switching network)")
+            Logger.v(
+                "Rewriter",
+                "Got pending connect failure, reconnecting socket (probably switching network)"
+            )
             true
         }
         c is ErrnoException && c.errno == OsConstants.EPERM -> {

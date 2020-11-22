@@ -63,7 +63,10 @@ object EngineService {
 
         packetLoopService.onCreateSocket = {
             log.v("setup: onCreateSocket")
+            // 构造数据报套接字并将其绑定到本地主机上任何可用的端口。
             val socket = DatagramSocket()
+
+            // 该 Socket发送的数据报文 直接 会发送到 真实网络，而非 vpn的虚拟网络
             systemTunnelService.protectSocket(socket)
             socket
         }
@@ -117,12 +120,16 @@ object EngineService {
     suspend fun newKeypair(): Pair<PrivateKey, PublicKey> {
         val secret = BoringTunJNI.x25519_secret_key()
         log.w("newKeypair: secret = $secret")
+
         val public = BoringTunJNI.x25519_public_key(secret)
         log.w("newKeypair: public = $public")
+
         val secretString = BoringTunJNI.x25519_key_to_base64(secret)
         log.w("newKeypair: secretString = $secretString")
+
         val publicString = BoringTunJNI.x25519_key_to_base64(public)
         log.w("newKeypair: publicString = $publicString")
+
         return secretString to publicString
     }
 

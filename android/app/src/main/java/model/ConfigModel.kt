@@ -38,6 +38,7 @@ data class BlockaConfig(
     val keysGeneratedForDevice: DeviceId,
 
     // 当前账户的Lease，从服务端 获取，可以没有
+    // 根据账户的id 、 公钥、网关id、设备别名等信息 获取
     val lease: Lease?,
 
     // 网关？？？ 从哪里 获取的？？？

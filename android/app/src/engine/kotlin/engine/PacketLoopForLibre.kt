@@ -36,14 +36,16 @@ import java.io.*
 import java.net.*
 import java.nio.ByteBuffer
 
-
-internal class PacketLoopForLibre (
+/**
+ * DatagramPacket是基于UDP协议的,
+ */
+internal class PacketLoopForLibre(
     private val deviceIn: FileInputStream,
     private val deviceOut: FileOutputStream,
     private val createSocket: () -> DatagramSocket,
     private val stoppedUnexpectedly: () -> Unit,
     filter: Boolean = true
-): Thread("PacketLoopForLibre") {
+) : Thread("PacketLoopForLibre") {
 
     private val log = Logger("PLLibre")
     private val metrics = MetricsService
@@ -54,7 +56,10 @@ internal class PacketLoopForLibre (
     private val memory = ByteArray(PACKET_BUFFER_SIZE)
     private val packet = DatagramPacket(memory, 0, 1)
 
+    // 输入的文件描述符
     private var devicePipe: FileDescriptor? = null
+
+    // 记录错误的文件描述符
     private var errorPipe: FileDescriptor? = null
 
     private val rewriter = PacketRewriter(this::loopback, buffer, filter = filter)
@@ -64,12 +69,14 @@ internal class PacketLoopForLibre (
 
         try {
             val errors = setupErrorsPipe()
+            // 建立
             val device = setupDevicePipe(deviceIn)
 
             while (true) {
                 metrics.onLoopEnter()
                 if (shouldInterruptLoop()) throw InterruptedException()
 
+                // 监听管道的 PollIn事件
                 device.listenFor(OsConstants.POLLIN)
 
                 val polls = setupPolls(errors, device)
@@ -115,16 +122,20 @@ internal class PacketLoopForLibre (
             return
         }
 
-        val proxiedDns = DatagramPacket(udp.payload.rawData, 0, udp.payload.length(),
+        val proxiedDns = DatagramPacket(
+            udp.payload.rawData, 0, udp.payload.length(),
             originEnvelope.header.dstAddr,
-            udp.header.dstPort.valueAsInt())
+            udp.header.dstPort.valueAsInt()
+        )
         forward(proxiedDns, originEnvelope)
     }
 
     private fun toDevice(source: ByteArray, length: Int, originEnvelope: Packet) {
         originEnvelope as IpPacket
 
+        // 获取 报文中的数据
         val udp = originEnvelope.payload as UdpPacket
+
         val udpResponse = UdpPacket.Builder(udp)
             .srcAddr(originEnvelope.header.dstAddr)
             .dstAddr(originEnvelope.header.srcAddr)
@@ -163,14 +174,26 @@ internal class PacketLoopForLibre (
         loopback()
     }
 
+    /**
+     * 创建 socket，并将 数据报文 发送到真实的 网络中。
+     */
     private fun forward(udp: DatagramPacket, originEnvelope: IpPacket? = null) {
         val socket = createSocket()
         try {
+            // 将数据报包 发送到 真实的网络中
             socket.send(udp)
-            if (originEnvelope != null) forwarder.add(socket, originEnvelope)
-            else try { socket.close() } catch (ex: Exception) {}
+
+            if (originEnvelope != null) {
+                forwarder.add(socket, originEnvelope)
+            } else try {
+                socket.close()
+            } catch (ex: Exception) {
+            }
         } catch (ex: Exception) {
-            try { socket.close() } catch (ex: Exception) {}
+            try {
+                socket.close()
+            } catch (ex: Exception) {
+            }
             handleForwardException(ex)
         }
     }
@@ -183,8 +206,12 @@ internal class PacketLoopForLibre (
     private fun setupErrorsPipe() = {
         val pipe = Os.pipe()
         errorPipe = pipe[0]
+
         val errors = StructPollfd()
+
+        // 设置 要轮询的文件描述符。
         errors.fd = errorPipe
+
         errors.listenFor(OsConstants.POLLHUP or OsConstants.POLLERR)
         errors
     }()
@@ -227,9 +254,15 @@ internal class PacketLoopForLibre (
         }
     }
 
+    /**
+     * 从 设备中读取 网络数据
+     *
+     * 我理解 inputStream 是 写入到 Vpn虚拟网络中的数据。 outputStream 是 Vpn虚拟网络 接收到的数据
+     */
     private fun fromDeviceToProxy(device: StructPollfd, input: InputStream) {
         if (device.isEvent(OsConstants.POLLIN)) {
             try {
+                // 读取 长度为1600 的数据  到 memory中
                 val length = input.read(memory, 0, PACKET_BUFFER_SIZE)
                 if (length > 0) {
                     fromDevice(memory, length)
@@ -246,9 +279,11 @@ internal class PacketLoopForLibre (
         val iterator = forwarder.iterator()
         while (iterator.hasNext()) {
             val rule = iterator.next()
+
             if (polls[2 + index++].isEvent(OsConstants.POLLIN)) {
                 iterator.remove()
                 try {
+                    // 将
                     packet.setData(memory)
                     rule.socket.receive(packet)
                     toDevice(memory, packet.length, rule.originEnvelope)
@@ -271,7 +306,10 @@ internal class PacketLoopForLibre (
         log.v("Cleaning up resources: $this")
         forwarder.closeAll()
 
-        try { Os.close(errorPipe) } catch (ex: Exception) {}
+        try {
+            Os.close(errorPipe)
+        } catch (ex: Exception) {
+        }
         errorPipe = null
 
         // This is managed by the SystemTunnel
@@ -288,7 +326,8 @@ internal class PacketLoopForLibre (
                 field.isAccessible = true
                 val loader = field.get(l) as PropertiesLoader
                 loader.clearCache()
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+            }
         }
     }
 

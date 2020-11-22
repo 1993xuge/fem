@@ -60,6 +60,8 @@ internal class PacketLoopForPlus(
     private val buffer = ByteBuffer.allocateDirect(PACKET_BUFFER_SIZE)
     private val memory = ByteArray(PACKET_BUFFER_SIZE)
     private val packet = DatagramPacket(memory, 0, 1)
+
+    // ???
     private val op = ByteBuffer.allocateDirect(8)
 
     private var boringtunHandle: Long = -1L

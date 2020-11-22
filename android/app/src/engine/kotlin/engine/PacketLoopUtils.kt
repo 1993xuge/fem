@@ -51,6 +51,7 @@ internal class Forwarder(private val ttl: Long = 10 * 1000): Iterable<ForwardRul
             store.remove()
         }
 
+        // 从 socket中创建一个新的 ParcelFileDescriptor
         val fd = ParcelFileDescriptor.fromDatagramSocket(socket)
         val pipe = StructPollfd()
         pipe.fd = fd.fileDescriptor
@@ -60,7 +61,9 @@ internal class Forwarder(private val ttl: Long = 10 * 1000): Iterable<ForwardRul
     }
 
     override fun iterator() = store.iterator()
+
     operator fun get(index: Int) = store[index]
+
     fun size() = store.size
 
     fun closeRule(rule: ForwardRule) {
@@ -80,16 +83,22 @@ internal class Forwarder(private val ttl: Long = 10 * 1000): Iterable<ForwardRul
 }
 
 internal data class ForwardRule(
+    // tcp数据包
     val socket: DatagramSocket,
     // 原始数据包
     val originEnvelope: Packet,
+
     val pipe: StructPollfd,
+
     val fd: ParcelFileDescriptor,
+
+    // 有效时间
     val ttl: Long
 ) {
     val added = System.currentTimeMillis()
 
     fun isOld(): Boolean {
+        // 当前时间 - 被添加的时间 超过了 ttl，表明过期了
         return (System.currentTimeMillis() - added) > ttl
     }
 }

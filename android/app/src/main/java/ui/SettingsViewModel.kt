@@ -148,15 +148,26 @@ class SettingsViewModel : ViewModel() {
     //
     fun getCurrentDns(): Dns {
         val current = _dnsEntries.value?.let { entries ->
+
             _localConfig.value?.let { localConfig ->
+
+                // 从 dns列表中 找到 第一个， localConfig中保存的 dns
                 entries.value.firstOrNull { localConfig.dnsChoice == it.id }
                     ?: run {
+                        // 如果 localConfig 中未保存，或未找到 匹配的DNS
+
                         log.w("Currently selected DNS does not exist, resetting to default")
+
+                        // copy出一份新的 localConfig，将默认的dns保存到里面
                         val newLocalConfig = localConfig.copy(dnsChoice = Defaults.localConfig().dnsChoice)
+
+                        // 更新本地的 LocalConfig
                         persistence.save(newLocalConfig)
                         viewModelScope.launch {
                             _localConfig.value = newLocalConfig
                         }
+
+                        // 返回 dns对象
                         entries.value.first { newLocalConfig.dnsChoice == it.id }
                     }
             }
